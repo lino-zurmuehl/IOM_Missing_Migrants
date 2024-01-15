@@ -7,7 +7,9 @@ library(htmltools)
 mm_df <- read.csv("Global Missing Migrants Dataset 2.csv") %>% 
   separate(Coordinates, into = c("lat", "lon"), sep=",") %>% 
   mutate(lat = as.numeric(lat),
-         lon = as.numeric(lon))
+         lon = as.numeric(lon)) %>% 
+  filter(Incident.Type == "Incident") %>% 
+  drop_na()
 
 # Define icons and labels
 icons <- makeIcon(iconUrl = "person-circle-question-solid.png",
@@ -22,8 +24,9 @@ labels <- sprintf(
 ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
-      selectInput("category", "Select Geographical Grouping", choices = unique(mm_df$UNSD.Geographical.Grouping)),
-      selectInput("cause", "Select Cause of Death", choices = unique(mm_df$Cause.of.Death))
+      selectInput("category", "Select Geographical Grouping", choices = c("None", unique(mm_df$UNSD.Geographical.Grouping))),
+      selectInput("month", "Select Reported Month", choices = c("None", unique(mm_df$Reported.Month))),
+      selectInput("year", "Select Year", choices = c("None", unique(mm_df$Incident.year)))
     ),
     mainPanel(leafletOutput("worldmap"))
   )
@@ -31,8 +34,17 @@ ui <- fluidPage(
 
 # Define the server
 server <- function(input, output, session) {
+  filtered_data <- reactive({
+    filter(
+      mm_df,
+      if (input$month != "None") Reported.Month == input$month else TRUE,
+      if (input$category != "None") UNSD.Geographical.Grouping == input$category else TRUE,
+      if (input$year != "None") Incident.year == input$year else TRUE
+    )
+  })
+  
   output$worldmap <- renderLeaflet({
-    leaflet(mm_df) %>% 
+    leaflet(filtered_data()) %>% 
       addTiles() %>%
       addMarkers(
         ~lon, ~lat, 
