@@ -1,4 +1,3 @@
-# IOM_Missing_Migrants
 <h2>IOM Missing Migrants Project</h2>
         <p>To practice my leaflet and shinyapp scills I started this small project with the IOM Missing Migrants dataset. 
             I optained the data from <a href="https://www.kaggle.com/datasets/nelgiriyewithana/global-missing-migrants-dataset/data">kaggel</a>.
