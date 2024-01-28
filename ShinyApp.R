@@ -14,7 +14,7 @@ mm_df <- read.csv("Global Missing Migrants Dataset 2.csv") %>%
     Migration.route == "" ~ "Uncategorized",
     Migration.route == "Western Africa / Atlantic route to the Canary Islands" 
                         ~ "Atlantic route to the Canary Islands",
-    TRUE ~ Migration.route))
+    TRUE ~ Migration.route)) 
 
 # Define icons and labels
 icons <- makeIcon(iconUrl = "person-circle-question-solid.png",
@@ -52,7 +52,7 @@ server <- function(input, output, session) {
       filtered_data()$Number.of.Dead, filtered_data()$Cause.of.Death, filtered_data()$Migration.route) %>%
       lapply(htmltools::HTML)
     
-    leaflet(filtered_data()) %>% 
+    leaflet(filtered_data(), height=2000, width=2000) %>% 
       addTiles() %>%
       addMarkers(
         ~lon, ~lat, 
