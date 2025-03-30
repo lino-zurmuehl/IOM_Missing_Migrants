@@ -1,0 +1,212 @@
+{
+  "type": "FeatureCollection",
+  "name": "MajorMigrationRoutes",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "West Africa to Southwestern Europe (Western Route)",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-16.0, 13.0],
+          [-7.0, 29.0],
+          [-5.6, 36.0],
+          [-2.0, 36.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "West Africa to Central Mediterranean (Trans-Saharan)",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [8.0, 4.0],
+          [12.0, 15.0],
+          [15.0, 24.0],
+          [14.0, 30.0],
+          [11.0, 32.0],
+          [11.0, 37.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "East Africa to Eastern Mediterranean (Nile/Levant Corridor)",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [37.0, 0.0],
+          [33.0, 9.0],
+          [31.0, 15.0],
+          [30.0, 21.0],
+          [30.0, 31.0],
+          [34.0, 33.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Southern Africa to West Africa",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [31.0, -30.0],
+          [27.0, -25.0],
+          [20.0, -20.0],
+          [13.0, -8.0],
+          [15.0, 2.0],
+          [8.0, 4.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Southern Africa to Central Africa",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [27.0, -25.0],
+          [24.0, -20.0],
+          [18.0, -12.0],
+          [11.0, -4.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "West Africa Corridor (Nigeria to Ghana)",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [8.0, 4.0],
+          [2.0, 6.0],
+          [-1.0, 5.6],
+          [-4.0, 6.5]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "West Africa Coastal Route (Senegal to Gulf of Guinea)",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-16.0, 13.0],
+          [-14.0, 10.0],
+          [-10.0, 6.0],
+          [-6.0, 0.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Eastern Mediterranean to South Asia",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [34.0, 33.0],
+          [41.0, 32.0],
+          [50.0, 29.0],
+          [58.0, 25.0],
+          [66.0, 23.0],
+          [75.0, 19.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "South Asia to Southeast Asia",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [75.0, 19.0],
+          [82.0, 18.0],
+          [95.0, 17.0],
+          [100.0, 15.0],
+          [105.0, 7.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Southeast Asia to Australia",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [105.0, 7.0],
+          [115.0, -1.0],
+          [122.0, -8.0],
+          [128.0, -13.0]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North America to South America",
+        "stroke": "#FF0000",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-123.0, 49.0],
+          [-122.0, 44.0],
+          [-118.0, 32.0],
+          [-105.0, 19.0],
+          [-95.0, 7.0],
+          [-79.0, -4.0],
+          [-74.0, -15.0],
+          [-72.0, -33.0]
+        ]
+      }
+    }
+  ]
+}
