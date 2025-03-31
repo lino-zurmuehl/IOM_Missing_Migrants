@@ -2,7 +2,7 @@ library(tidyverse)
 library(leaflet)
 library(htmltools)
 # Read the data
-mm_df <- read.csv("Missing_Migrants_2025.csv") %>% 
+mm_df <- read.csv("IOM_Missing_Migrants/Missing_Migrants_2025.csv") %>% 
   # replace the whitespeace in column names to _
   setNames(gsub(" ", "_", names(.))) %>%
   separate(Coordinates, into = c("lat", "lon"), sep=",") %>% 
@@ -21,7 +21,7 @@ mm_df <- read.csv("Missing_Migrants_2025.csv") %>%
   summarise(count = n()) %>% 
   ungroup()
 
-acled_df <- read.csv("acled.csv") %>%
+acled_df <- read.csv("IOM_Missing_Migrants/acled.csv") %>%
   rename(lat = latitude, lon = longitude) %>%
   drop_na(lat, lon, country) %>%
   # drop columns exept for lat, lon, event_type, country, year, event_id
@@ -43,7 +43,7 @@ acled_df <- acled_df %>%
 library(giscoR)
 library(tmap)
 library(sf)
-routes <- st_read("migration_routes_verified.geojson", )
+routes <- st_read("IOM_Missing_Migrants/migration_routes_verified.geojson", )
 
 # Create a leaflet map
 
