@@ -65,5 +65,26 @@ routes <- st_read("IOM_Missing_Migrants/migration_routes_verified.geojson", )
 
 # Create a leaflet map
 
+# Install these if not installed:
+# install.packages("leaflet")
+# install.packages("sf")
+
+library(sf)
+library(leaflet)
+
+# 1. Read the GeoJSON file
+routes <- st_read("migration_routes_verified.geojson")
+
+# 2. If needed, transform to WGS84 (lat/lon)
+# Check your layer's existing CRS; only do this if routes isn't already in EPSG:4326
+routes <- st_transform(routes, 4326)
+
+# 3. Create a leaflet map
+leaflet(routes) %>%
+  # A tile provider of your choice:
+  addProviderTiles("CartoDB.Positron") %>%
+  
+  # Since these are routes, we likely need polylines:
+  addPolylines()
 
 
