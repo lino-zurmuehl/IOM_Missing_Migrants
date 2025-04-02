@@ -17,9 +17,27 @@ mm_df <- read.csv("IOM_Missing_Migrants/Missing_Migrants_2025.csv") %>%
     TRUE ~ Migration.Route)) %>%
   filter(Country.of.Origin != "Unknown") %>% 
   rename(country = Country.of.Origin) %>% 
+  # Split comma-separated countries into multiple rows
+  separate_rows(country, sep = ",") %>%
+  
+  # Group by the original record ID
+  group_by(Main.ID) %>%
+  
+  # Count how many countries came from the same original row
+  mutate(num_countries = n()) %>%
+  
+  # Divide 'Total.Number.of.Dead.and.Missing' by the number of countries
+  mutate(total_number_of_dead_and_missing = Total.Number.of.Dead.and.Missing / num_countries) %>%
+  
+  ungroup() %>%
+  
+  # Clean whitespace in country names
+  mutate(country = trimws(country)) %>%
+  
   group_by(country) %>% 
   summarise(count = n()) %>% 
   ungroup()
+
 
 acled_df <- read.csv("IOM_Missing_Migrants/acled.csv") %>%
   rename(lat = latitude, lon = longitude) %>%
