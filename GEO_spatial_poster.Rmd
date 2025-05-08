@@ -159,37 +159,30 @@ route_data <- list(
   list(
     route_name = "Eastern Mediterranean",
     origin_countries = c("SYR", "IRQ", "AFG"),
-    transit_countries = c("TUR"),
-    destination_countries = c("GRC", "CYP", "BGR"),
-    color = "#FF5722"  # Deep Orange
+    transit_countries = c("TUR", "GRC", "MKD", "SRB", "BIH", "MNE", "ALB"),
+    destination_countries = c("HRV", "HUN", "ROU", "AUT", "DEU","GRC", "CYP", "BGR"),
+    color = "#E64A19"  # Deep Orange/Red (for Eastern Med)
   ),
   list(
     route_name = "Central Mediterranean",
     origin_countries = c("ERI", "SDN", "NGA", "SOM"),
     transit_countries = c("LBY", "TUN", "DZA", "EGY"),
     destination_countries = c("ITA", "MLT"),
-    color = "#2196F3"  # Blue
+    color = "#1976D2"  # Blue (for Central Med)
   ),
   list(
     route_name = "Western Mediterranean",
     origin_countries = c("DZA", "MLI", "NER"),
     transit_countries = c("MAR"),
     destination_countries = c("ESP"),
-    color = "#4CAF50"  # Green
-  ),
-  list(
-    route_name = "Western Balkan",
-    origin_countries = c("SYR", "IRQ", "AFG"),
-    transit_countries = c("TUR", "GRC", "MKD", "SRB", "BIH", "MNE", "ALB"),
-    destination_countries = c("HRV", "HUN", "ROU", "AUT", "DEU"),
-    color = "#9C27B0"  # Purple
+    color = "#2E7D32"  # Green (for Western Med)
   ),
   list(
     route_name = "Mesoamerican Corridor",
     origin_countries = c("GTM", "HND", "SLV", "COL", "VEN"),
     transit_countries = c("PAN", "CRI", "NIC", "MEX"),
     destination_countries = c("USA"),
-    color = "#FFC107"  # Amber
+    color = "#FFA000"  # Amber/Yellow (for Mesoamerican)
   )
 )
 
@@ -289,76 +282,106 @@ for (route in route_data) {
 # Combine all route sf objects
 routes_sf <- do.call(rbind, all_routes_sf)
 
-# Extract all countries involved for highlighting
-all_countries <- unique(unlist(lapply(route_data, function(r) {
-  c(r$origin_countries, r$transit_countries, r$destination_countries)
-})))
-
-highlighted_countries <- countries %>%
-  filter(ISO3_CODE %in% all_countries)
-
-# Create point datasets for origins, transits, and destinations
-create_point_dataset <- function(type) {
-  country_codes <- unique(unlist(lapply(route_data, function(r) {
-    switch(type,
-           "origin" = r$origin_countries,
-           "transit" = r$transit_countries,
-           "destination" = r$destination_countries)
-  })))
-  
-  if (length(country_codes) > 0) {
-    points <- centroids %>%
-      filter(ISO3_CODE %in% country_codes) %>%
-      mutate(point_type = type)
-    return(points)
-  } else {
-    return(NULL)
-  }
-}
-
-origin_points <- create_point_dataset("origin")
-transit_points <- create_point_dataset("transit")
-destination_points <- create_point_dataset("destination")
-
-# Prepare the map
-point_icons <- iconList(
-  origin = makeIcon(
-    iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-    iconWidth = 25, iconHeight = 41,
-    iconAnchorX = 12, iconAnchorY = 41
-  ),
-  transit = makeIcon(
-    iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png",
-    iconWidth = 25, iconHeight = 41,
-    iconAnchorX = 12, iconAnchorY = 41
-  ),
-  destination = makeIcon(
-    iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
-    iconWidth = 25, iconHeight = 41,
-    iconAnchorX = 12, iconAnchorY = 41
-  )
+# Define colors for country types with stronger colors
+country_type_colors <- c(
+  "origin" = "#F44336",      # Red for origin countries
+  "transit" = "#FF9800",     # Orange for transit countries
+  "destination" = "#4CAF50"  # Green for destination countries
 )
 
-# Create a color palette for the routes
-route_pal <- colorFactor(route_colors, domain = route_names)
+# Categorize countries by their role in migration
+categorize_countries <- function() {
+  # Collect all countries by type
+  all_origins <- unique(unlist(lapply(route_data, function(r) r$origin_countries)))
+  all_transits <- unique(unlist(lapply(route_data, function(r) r$transit_countries)))
+  all_destinations <- unique(unlist(lapply(route_data, function(r) r$destination_countries)))
+  
+  # Handle countries that appear in multiple categories - prioritize destination > transit > origin
+  all_transits <- setdiff(all_transits, all_destinations)
+  all_origins <- setdiff(all_origins, c(all_destinations, all_transits))
+  
+  # Create a data frame mapping country codes to their types
+  country_types <- data.frame(
+    ISO3_CODE = c(all_origins, all_transits, all_destinations),
+    country_type = c(
+      rep("origin", length(all_origins)),
+      rep("transit", length(all_transits)),
+      rep("destination", length(all_destinations))
+    ),
+    stringsAsFactors = FALSE
+  )
+  
+  return(country_types)
+}
+
+# Get country types
+country_types <- categorize_countries()
+
+# Print country categories for debugging
+print(paste("Origin countries:", length(unique(country_types$ISO3_CODE[country_types$country_type == "origin"]))))
+print(paste("Transit countries:", length(unique(country_types$ISO3_CODE[country_types$country_type == "transit"]))))
+print(paste("Destination countries:", length(unique(country_types$ISO3_CODE[country_types$country_type == "destination"]))))
+print(paste("Total categorized countries:", nrow(country_types)))
+
+# Join country types to countries data
+countries_with_types <- countries_with_names %>%
+  left_join(country_types, by = "ISO3_CODE") %>%
+  mutate(
+    country_type = ifelse(is.na(country_type), "other", country_type),
+    fill_color = case_when(
+      country_type == "origin" ~ as.character(country_type_colors["origin"]),
+      country_type == "transit" ~ as.character(country_type_colors["transit"]),
+      country_type == "destination" ~ as.character(country_type_colors["destination"]),
+      TRUE ~ "#f0f0f0"  # Light gray for other countries
+    )
+  )
+
+# Create the color vector for the legend
+route_colors_for_legend <- sapply(route_data, function(r) r$color)
+route_names_for_legend <- sapply(route_data, function(r) r$route_name)
 
 # Create the leaflet map
 m <- leaflet() %>%
   addTiles() %>%
+  # Add all countries with light color (non-migration countries)
   addPolygons(
-    data = highlighted_countries,
-    fillColor = "#cccccc",
-    fillOpacity = 0.4,
+    data = countries_with_names %>% filter(!ISO3_CODE %in% country_types$ISO3_CODE),
+    fillColor = "#f0f0f0",
+    fillOpacity = 0.3,
     color = "#666666",
-    weight = 1,
+    weight = 0.5,
     label = ~NAME_ENGL
   )
 
-# Add route lines with arrows
+# Add countries by type with different colors (explicitly use the colors)
+for (type in c("origin", "transit", "destination")) {
+  countries_by_type <- countries_with_types %>% 
+    filter(country_type == type)
+  
+  if (nrow(countries_by_type) > 0) {
+    type_label <- paste0(toupper(substr(type, 1, 1)), substr(type, 2, nchar(type)))
+    
+    m <- m %>%
+      addPolygons(
+        data = countries_by_type,
+        fillColor = as.character(country_type_colors[type]),  # Force string conversion
+        fillOpacity = 0.7,
+        color = "#333333",
+        weight = 1,
+        label = ~paste0(NAME_ENGL, " (", type_label, ")"),
+        group = type
+      )
+  }
+}
+
+# Add route lines with arrows - use direct color from route_data instead of palette
 for (i in 1:nrow(routes_sf)) {
   route_geom <- routes_sf$geometry[i]
   route_name <- routes_sf$route_name[i]
-  route_color <- route_pal(route_name)
+  
+  # Find the matching route in route_data to get the exact color
+  route_idx <- match(route_name, sapply(route_data, function(r) r$route_name))
+  route_color <- route_data[[route_idx]]$color
   
   coords <- st_coordinates(route_geom)
   m <- m %>%
@@ -366,55 +389,42 @@ for (i in 1:nrow(routes_sf)) {
       lng = coords[, "X"],
       lat = coords[, "Y"],
       color = route_color,
-      weight = 3,
-      opacity = 0.8,
+      weight = 1,
+      opacity = 0.9,
       label = route_name
     ) %>%
     addArrowhead(
       lng = coords[, "X"],
       lat = coords[, "Y"],
       color = route_color,
-      weight = 3,
-      opacity = 0.8
+      weight = 1,
+      opacity = 0.9
     )
 }
 
-# Add points with custom icons
-if (!is.null(origin_points)) {
-  m <- m %>%
-    addMarkers(
-      data = origin_points,
-      icon = ~point_icons$origin,
-      label = ~paste0(NAME_ENGL, " (Origin)")
-    )
-}
-
-if (!is.null(transit_points)) {
-  m <- m %>%
-    addMarkers(
-      data = transit_points,
-      icon = ~point_icons$transit,
-      label = ~paste0(NAME_ENGL, " (Transit)")
-    )
-}
-
-if (!is.null(destination_points)) {
-  m <- m %>%
-    addMarkers(
-      data = destination_points,
-      icon = ~point_icons$destination,
-      label = ~paste0(NAME_ENGL, " (Destination)")
-    )
-}
-
-# Add a legend
+# Add legends
 m <- m %>%
+  # Add route legend with correct colors
   addLegend(
     position = "bottomright",
-    colors = route_colors,
-    labels = route_names,
+    colors = route_colors_for_legend,
+    labels = route_names_for_legend,
     title = "Migration Routes",
-    opacity = 0.8
+    opacity = 0.9
+  ) %>%
+  # Add country type legend
+  addLegend(
+    position = "bottomleft",
+    colors = unname(country_type_colors),
+    labels = c("Origin Countries", "Transit Countries", "Destination Countries"),
+    title = "Country Types",
+    opacity = 0.9
+  ) %>%
+  # Add layer controls
+  addLayersControl(
+    baseGroups = c(),
+    overlayGroups = c("origin", "transit", "destination"),
+    options = layersControlOptions(collapsed = FALSE)
   )
 
 # Display the map
