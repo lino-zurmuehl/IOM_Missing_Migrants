@@ -1,0 +1,423 @@
+---
+title: "Untitled"
+author: "Lino Zurmuehl + Giulia Pertilli"
+date: "2025-05-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(leaflet)
+library(htmltools)
+library(giscoR)
+library(tmap)
+library(sf)
+library(mapview)
+library(leaflet)
+install.packages("leaflet.extras2")
+library(leaflet.extras2)
+```
+
+## Load Data
+
+
+```{r data preprocessing}
+mm_df <- read.csv("Missing_Migrants_2025.csv") %>% 
+  # replace the whitespeace in column names to _
+  setNames(gsub(" ", "_", names(.))) %>%
+  separate(Coordinates, into = c("lat", "lon"), sep=",") %>% 
+  mutate(lat = as.numeric(lat),
+         lon = as.numeric(lon)) %>% 
+  drop_na(lat, lon) %>%
+  filter(Incident.Type == "Incident") %>% 
+  mutate(Migration.Route = case_when(
+    Migration.Route == "" ~ "Uncategorized",
+    Migration.Route == "Western Africa / Atlantic route to the Canary Islands" 
+    ~ "Atlantic route to the Canary Islands",
+    TRUE ~ Migration.Route)) %>%
+  filter(Country.of.Origin != "Unknown") %>% 
+  rename(country = Country.of.Origin) %>% 
+  group_by(country) %>% 
+  summarise(count = n()) %>% 
+  ungroup()
+
+acled_df <- read.csv("acled.csv") %>%
+  rename(lat = latitude, lon = longitude) %>%
+  drop_na(lat, lon, country) %>%
+  # drop columns exept for lat, lon, event_type, country, year, event_id
+  select(lat, lon, event_type, country, year, event_id_cnty) %>% 
+  group_by(country) %>% 
+  summarise(count = n()) %>% 
+  ungroup()
+```
+
+## Filter down to countries in mm_df
+
+
+```{r filtering}
+# save list of all countries in mm_df to then filter out the countries in acled_df
+countries <- mm_df %>% 
+  select(country) %>% 
+  distinct() %>% 
+  pull()
+
+# filter out the countries in acled_df
+acled_df <- acled_df %>% 
+  filter(country %in% countries)
+```
+
+## Add routes
+
+```{r}
+countries <- gisco_get_countries(
+  year = "2016",
+  epsg = "4326",
+  cache = TRUE,
+  update_cache = FALSE,
+  cache_dir = NULL,
+  verbose = FALSE,
+  resolution = "20",
+  spatialtype = "RG",
+  country = NULL,
+  region = NULL
+)
+
+centroids <- countries %>%
+  st_centroid() %>%               # geometric centroid
+  select(ISO3_CODE, geometry)       # keep only ISO‑3 code + geometry
+
+# 3. Define your five named routes as ordered ISO‑3 vectors
+routes <- list(
+  EasternMediterranean = c("TUR", "GRC", "CYP", "BGR"),
+  CentralMediterranean = c("LBY", "TUN", "DZA", "EGY", "ITA", "MLT"),
+  WesternMediterranean = c("MAR", "DZA", "ESP"),
+  WesternBalkan        = c("MKD", "XKX", "MNE", "ALB", "SRB", "BIH", "HRV", "HUN", "ROU"),
+  MesoamericanCorridor = c("PAN", "CRI", "NIC", "GTM", "HND", "MEX", "USA")
+)
+
+# 4. For each route, extract and order its centroids, then make a LINESTRING
+route_sfgs <- lapply(routes, function(iso_vec) {
+  pts <- centroids %>%
+    filter(ISO3_CODE %in% iso_vec) %>%
+    slice(match(iso_vec, ISO3_CODE))
+  st_cast(st_combine(pts$geometry), "LINESTRING")
+})
+
+# 5. Collapse into a true sfc column
+route_sfc <- st_sfc(
+  sapply(route_sfgs, `[`),     # pulls each sfg out of its one‑element list
+  crs = st_crs(countries)
+)
+
+# 6. Now build your sf object
+routes_sf <- st_sf(
+  route_name = names(route_sfgs),
+  geometry   = route_sfc
+)
+
+#qtm(countries) +
+ # tm_shape(routes_sf) +
+  #tm_lines(col = "route_name", lwd = 2, alpha = 0.5) +
+  #tm_layout(title = "Migration routes in Europe")
+
+# map view routes
+mapview(routes_sf, zcol = "route_name", lwd = 2, alpha = 0.5) +
+  mapview(countries, col.regions = "grey", alpha = 0.5)
+```
+```{r}
+# Get countries data
+countries <- gisco_get_countries(
+  year = "2016",
+  epsg = "4326",
+  cache = TRUE,
+  update_cache = FALSE,
+  cache_dir = NULL,
+  verbose = FALSE,
+  resolution = "20",
+  spatialtype = "RG",
+  country = NULL,
+  region = NULL
+)
+
+# Add country names for labeling
+countries_with_names <- countries %>%
+  select(ISO3_CODE, NAME_ENGL, geometry)
+
+# Get centroids for origin/destination points
+centroids <- countries_with_names %>%
+  st_centroid() %>%
+  select(ISO3_CODE, NAME_ENGL, geometry)
+
+# Define route data with more detailed structure
+# For each route, define:
+# - route_name: Name of the migration route
+# - origin_countries: Source countries
+# - transit_countries: Countries passed through
+# - destination_countries: Final destination countries
+# - color: Unique color for the route
+route_data <- list(
+  list(
+    route_name = "Eastern Mediterranean",
+    origin_countries = c("SYR", "IRQ", "AFG"),
+    transit_countries = c("TUR"),
+    destination_countries = c("GRC", "CYP", "BGR"),
+    color = "#FF5722"  # Deep Orange
+  ),
+  list(
+    route_name = "Central Mediterranean",
+    origin_countries = c("ERI", "SDN", "NGA", "SOM"),
+    transit_countries = c("LBY", "TUN", "DZA", "EGY"),
+    destination_countries = c("ITA", "MLT"),
+    color = "#2196F3"  # Blue
+  ),
+  list(
+    route_name = "Western Mediterranean",
+    origin_countries = c("DZA", "MLI", "NER"),
+    transit_countries = c("MAR"),
+    destination_countries = c("ESP"),
+    color = "#4CAF50"  # Green
+  ),
+  list(
+    route_name = "Western Balkan",
+    origin_countries = c("SYR", "IRQ", "AFG"),
+    transit_countries = c("TUR", "GRC", "MKD", "SRB", "BIH", "MNE", "ALB"),
+    destination_countries = c("HRV", "HUN", "ROU", "AUT", "DEU"),
+    color = "#9C27B0"  # Purple
+  ),
+  list(
+    route_name = "Mesoamerican Corridor",
+    origin_countries = c("GTM", "HND", "SLV", "COL", "VEN"),
+    transit_countries = c("PAN", "CRI", "NIC", "MEX"),
+    destination_countries = c("USA"),
+    color = "#FFC107"  # Amber
+  )
+)
+
+# Create a function to generate directional flows
+create_flow_lines <- function(route) {
+  # Function to create lines between groups of countries
+  create_lines_between_groups <- function(from_countries, to_countries) {
+    from_points <- centroids %>% filter(ISO3_CODE %in% from_countries)
+    to_points <- centroids %>% filter(ISO3_CODE %in% to_countries)
+    
+    # For each origin, create lines to each destination
+    lines <- list()
+    for (i in 1:nrow(from_points)) {
+      for (j in 1:nrow(to_points)) {
+        line_coords <- rbind(
+          st_coordinates(from_points$geometry[i]),
+          st_coordinates(to_points$geometry[j])
+        )
+        lines[[length(lines) + 1]] <- st_linestring(line_coords)
+      }
+    }
+    return(lines)
+  }
+  
+  # Create lines from origin to transit
+  origin_to_transit <- list()
+  if (length(route$origin_countries) > 0 && length(route$transit_countries) > 0) {
+    origin_to_transit <- create_lines_between_groups(route$origin_countries, route$transit_countries)
+  }
+  
+  # Create lines between transit countries (in sequence if possible)
+  transit_lines <- list()
+  if (length(route$transit_countries) > 1) {
+    for (i in 1:(length(route$transit_countries) - 1)) {
+      from_country <- route$transit_countries[i]
+      to_country <- route$transit_countries[i + 1]
+      
+      from_point <- centroids %>% filter(ISO3_CODE == from_country)
+      to_point <- centroids %>% filter(ISO3_CODE == to_country)
+      
+      if (nrow(from_point) > 0 && nrow(to_point) > 0) {
+        line_coords <- rbind(
+          st_coordinates(from_point$geometry),
+          st_coordinates(to_point$geometry)
+        )
+        transit_lines[[length(transit_lines) + 1]] <- st_linestring(line_coords)
+      }
+    }
+  }
+  
+  # Create lines from transit to destination
+  transit_to_dest <- list()
+  if (length(route$transit_countries) > 0 && length(route$destination_countries) > 0) {
+    # Use the last transit countries to connect to destinations
+    last_transit_countries <- tail(route$transit_countries, min(2, length(route$transit_countries)))
+    transit_to_dest <- create_lines_between_groups(last_transit_countries, route$destination_countries)
+  }
+  
+  # If there are no transit countries, connect origins directly to destinations
+  origin_to_dest <- list()
+  if (length(route$transit_countries) == 0 && length(route$origin_countries) > 0 && 
+      length(route$destination_countries) > 0) {
+    origin_to_dest <- create_lines_between_groups(route$origin_countries, route$destination_countries)
+  }
+  
+  # Combine all lines
+  all_lines <- c(origin_to_transit, transit_lines, transit_to_dest, origin_to_dest)
+  
+  # Create an sf object
+  if (length(all_lines) > 0) {
+    sf_lines <- st_sfc(all_lines, crs = st_crs(countries))
+    return(sf_lines)
+  } else {
+    return(NULL)
+  }
+}
+
+# Process each route
+all_routes_sf <- list()
+route_names <- character()
+route_colors <- character()
+
+for (route in route_data) {
+  route_lines <- create_flow_lines(route)
+  if (!is.null(route_lines)) {
+    # Create sf object for this route
+    route_sf <- st_sf(
+      route_name = rep(route$route_name, length(route_lines)),
+      geometry = route_lines
+    )
+    all_routes_sf[[length(all_routes_sf) + 1]] <- route_sf
+    route_names <- c(route_names, route$route_name)
+    route_colors <- c(route_colors, route$color)
+  }
+}
+
+# Combine all route sf objects
+routes_sf <- do.call(rbind, all_routes_sf)
+
+# Extract all countries involved for highlighting
+all_countries <- unique(unlist(lapply(route_data, function(r) {
+  c(r$origin_countries, r$transit_countries, r$destination_countries)
+})))
+
+highlighted_countries <- countries %>%
+  filter(ISO3_CODE %in% all_countries)
+
+# Create point datasets for origins, transits, and destinations
+create_point_dataset <- function(type) {
+  country_codes <- unique(unlist(lapply(route_data, function(r) {
+    switch(type,
+           "origin" = r$origin_countries,
+           "transit" = r$transit_countries,
+           "destination" = r$destination_countries)
+  })))
+  
+  if (length(country_codes) > 0) {
+    points <- centroids %>%
+      filter(ISO3_CODE %in% country_codes) %>%
+      mutate(point_type = type)
+    return(points)
+  } else {
+    return(NULL)
+  }
+}
+
+origin_points <- create_point_dataset("origin")
+transit_points <- create_point_dataset("transit")
+destination_points <- create_point_dataset("destination")
+
+# Prepare the map
+point_icons <- iconList(
+  origin = makeIcon(
+    iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+    iconWidth = 25, iconHeight = 41,
+    iconAnchorX = 12, iconAnchorY = 41
+  ),
+  transit = makeIcon(
+    iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png",
+    iconWidth = 25, iconHeight = 41,
+    iconAnchorX = 12, iconAnchorY = 41
+  ),
+  destination = makeIcon(
+    iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+    iconWidth = 25, iconHeight = 41,
+    iconAnchorX = 12, iconAnchorY = 41
+  )
+)
+
+# Create a color palette for the routes
+route_pal <- colorFactor(route_colors, domain = route_names)
+
+# Create the leaflet map
+m <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(
+    data = highlighted_countries,
+    fillColor = "#cccccc",
+    fillOpacity = 0.4,
+    color = "#666666",
+    weight = 1,
+    label = ~NAME_ENGL
+  )
+
+# Add route lines with arrows
+for (i in 1:nrow(routes_sf)) {
+  route_geom <- routes_sf$geometry[i]
+  route_name <- routes_sf$route_name[i]
+  route_color <- route_pal(route_name)
+  
+  coords <- st_coordinates(route_geom)
+  m <- m %>%
+    addPolylines(
+      lng = coords[, "X"],
+      lat = coords[, "Y"],
+      color = route_color,
+      weight = 3,
+      opacity = 0.8,
+      label = route_name
+    ) %>%
+    addArrowhead(
+      lng = coords[, "X"],
+      lat = coords[, "Y"],
+      color = route_color,
+      weight = 3,
+      opacity = 0.8
+    )
+}
+
+# Add points with custom icons
+if (!is.null(origin_points)) {
+  m <- m %>%
+    addMarkers(
+      data = origin_points,
+      icon = ~point_icons$origin,
+      label = ~paste0(NAME_ENGL, " (Origin)")
+    )
+}
+
+if (!is.null(transit_points)) {
+  m <- m %>%
+    addMarkers(
+      data = transit_points,
+      icon = ~point_icons$transit,
+      label = ~paste0(NAME_ENGL, " (Transit)")
+    )
+}
+
+if (!is.null(destination_points)) {
+  m <- m %>%
+    addMarkers(
+      data = destination_points,
+      icon = ~point_icons$destination,
+      label = ~paste0(NAME_ENGL, " (Destination)")
+    )
+}
+
+# Add a legend
+m <- m %>%
+  addLegend(
+    position = "bottomright",
+    colors = route_colors,
+    labels = route_names,
+    title = "Migration Routes",
+    opacity = 0.8
+  )
+
+# Display the map
+m
+```
+
