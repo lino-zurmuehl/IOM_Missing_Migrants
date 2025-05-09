@@ -318,7 +318,7 @@ for (type in c("origin", "transit", "destination")) {
   }
 }
 
-# Add route lines with arrows - use direct color from route_data instead of palette
+# Add route lines with arrows 
 for (i in 1:nrow(routes_sf)) {
   route_geom <- routes_sf$geometry[i]
   route_name <- routes_sf$route_name[i]
