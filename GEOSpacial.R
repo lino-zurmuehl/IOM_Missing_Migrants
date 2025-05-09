@@ -2,7 +2,7 @@ library(tidyverse)
 library(leaflet)
 library(htmltools)
 # Read the data
-mm_df <- read.csv("IOM_Missing_Migrants/Missing_Migrants_2025.csv") %>% 
+mm_df <- read.csv("Missing_Migrants_2025.csv") %>% 
   # replace the whitespeace in column names to _
   setNames(gsub(" ", "_", names(.))) %>%
   separate(Coordinates, into = c("lat", "lon"), sep=",") %>% 
@@ -16,6 +16,7 @@ mm_df <- read.csv("IOM_Missing_Migrants/Missing_Migrants_2025.csv") %>%
     ~ "Atlantic route to the Canary Islands",
     TRUE ~ Migration.Route)) %>%
   filter(Country.of.Origin != "Unknown") %>% 
+  filter(!str_detect(Region.of.Incident, "Asia")) %>% 
   rename(country = Country.of.Origin) %>% 
   # Split comma-separated countries into multiple rows
   separate_rows(country, sep = ",") %>%
