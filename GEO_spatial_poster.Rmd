@@ -69,62 +69,6 @@ acled_df <- acled_df %>%
 ## Add routes
 
 ```{r}
-countries <- gisco_get_countries(
-  year = "2016",
-  epsg = "4326",
-  cache = TRUE,
-  update_cache = FALSE,
-  cache_dir = NULL,
-  verbose = FALSE,
-  resolution = "20",
-  spatialtype = "RG",
-  country = NULL,
-  region = NULL
-)
-
-centroids <- countries %>%
-  st_centroid() %>%               # geometric centroid
-  select(ISO3_CODE, geometry)       # keep only ISO‑3 code + geometry
-
-# 3. Define your five named routes as ordered ISO‑3 vectors
-routes <- list(
-  EasternMediterranean = c("TUR", "GRC", "CYP", "BGR"),
-  CentralMediterranean = c("LBY", "TUN", "DZA", "EGY", "ITA", "MLT"),
-  WesternMediterranean = c("MAR", "DZA", "ESP"),
-  WesternBalkan        = c("MKD", "XKX", "MNE", "ALB", "SRB", "BIH", "HRV", "HUN", "ROU"),
-  MesoamericanCorridor = c("PAN", "CRI", "NIC", "GTM", "HND", "MEX", "USA")
-)
-
-# 4. For each route, extract and order its centroids, then make a LINESTRING
-route_sfgs <- lapply(routes, function(iso_vec) {
-  pts <- centroids %>%
-    filter(ISO3_CODE %in% iso_vec) %>%
-    slice(match(iso_vec, ISO3_CODE))
-  st_cast(st_combine(pts$geometry), "LINESTRING")
-})
-
-# 5. Collapse into a true sfc column
-route_sfc <- st_sfc(
-  sapply(route_sfgs, `[`),     # pulls each sfg out of its one‑element list
-  crs = st_crs(countries)
-)
-
-# 6. Now build your sf object
-routes_sf <- st_sf(
-  route_name = names(route_sfgs),
-  geometry   = route_sfc
-)
-
-#qtm(countries) +
- # tm_shape(routes_sf) +
-  #tm_lines(col = "route_name", lwd = 2, alpha = 0.5) +
-  #tm_layout(title = "Migration routes in Europe")
-
-# map view routes
-mapview(routes_sf, zcol = "route_name", lwd = 2, alpha = 0.5) +
-  mapview(countries, col.regions = "grey", alpha = 0.5)
-```
-```{r}
 # Get countries data
 countries <- gisco_get_countries(
   year = "2016",
@@ -161,7 +105,7 @@ route_data <- list(
     origin_countries = c("SYR", "IRQ", "AFG"),
     transit_countries = c("TUR", "GRC", "MKD", "SRB", "BIH", "MNE", "ALB"),
     destination_countries = c("HRV", "HUN", "ROU", "AUT", "DEU","GRC", "CYP", "BGR"),
-    color = "#E64A19"  # Deep Orange/Red (for Eastern Med)
+    color = "#E64A19"  
   ),
   list(
     route_name = "Central Mediterranean",
@@ -467,7 +411,7 @@ country_coords <- centroids %>%
   select(ISO3_CODE, NAME_ENGL, lon, lat)
 
 # Define migration connections with volume
-# Format: origin country, destination country, volume (arbitrary units for thickness)
+# Format: origin country, destination country, volume 
 migration_connections <- tribble(
   ~origin, ~destination, ~volume, ~group,
   # Eastern Mediterranean Route
