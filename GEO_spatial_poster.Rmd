@@ -1,0 +1,603 @@
+---
+title: "Untitled"
+author: "Lino Zurmuehl + Giulia Pertilli"
+date: "2025-05-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(leaflet)
+library(htmltools)
+library(giscoR)
+library(tmap)
+library(sf)
+library(mapview)
+library(leaflet)
+library(leaflet.extras2)
+library(ggplot2)
+library(ggrepel)
+library(ggalt)  
+```
+
+## Load Data
+
+
+```{r data preprocessing}
+mm_df <- read.csv("Missing_Migrants_2025.csv") %>% 
+  # replace the whitespeace in column names to _
+  setNames(gsub(" ", "_", names(.))) %>%
+  separate(Coordinates, into = c("lat", "lon"), sep=",") %>% 
+  mutate(lat = as.numeric(lat),
+         lon = as.numeric(lon)) %>% 
+  drop_na(lat, lon) %>%
+  filter(Incident.Type == "Incident") %>% 
+  mutate(Migration.Route = case_when(
+    Migration.Route == "" ~ "Uncategorized",
+    Migration.Route == "Western Africa / Atlantic route to the Canary Islands" 
+    ~ "Atlantic route to the Canary Islands",
+    TRUE ~ Migration.Route)) %>%
+  filter(Country.of.Origin != "Unknown") %>% 
+  rename(country = Country.of.Origin) %>% 
+  group_by(country) %>% 
+  summarise(count = n()) %>% 
+  ungroup()
+
+acled_df <- read.csv("acled.csv") %>%
+  rename(lat = latitude, lon = longitude) %>%
+  drop_na(lat, lon, country) %>%
+  # drop columns exept for lat, lon, event_type, country, year, event_id
+  select(lat, lon, event_type, country, year, event_id_cnty) %>% 
+  group_by(country) %>% 
+  summarise(count = n()) %>% 
+  ungroup()
+```
+
+## Filter down to countries in mm_df
+
+
+```{r filtering}
+# save list of all countries in mm_df to then filter out the countries in acled_df
+countries <- mm_df %>% 
+  select(country) %>% 
+  distinct() %>% 
+  pull()
+
+# filter out the countries in acled_df
+acled_df <- acled_df %>% 
+  filter(country %in% countries)
+```
+
+## Add routes
+
+```{r}
+# Get countries data
+countries <- gisco_get_countries(
+  year = "2016",
+  epsg = "4326",
+  cache = TRUE,
+  update_cache = FALSE,
+  cache_dir = NULL,
+  verbose = FALSE,
+  resolution = "20",
+  spatialtype = "RG",
+  country = NULL,
+  region = NULL
+)
+
+# Add country names for labeling
+countries_with_names <- countries %>%
+  select(ISO3_CODE, NAME_ENGL, geometry)
+
+# Get centroids for origin/destination points
+centroids <- countries_with_names %>%
+  st_centroid() %>%
+  select(ISO3_CODE, NAME_ENGL, geometry)
+
+# Define route data with more detailed structure
+# For each route, define:
+# - route_name: Name of the migration route
+# - origin_countries: Source countries
+# - transit_countries: Countries passed through
+# - destination_countries: Final destination countries
+# - color: Unique color for the route
+route_data <- list(
+  list(
+    route_name = "Eastern Mediterranean",
+    origin_countries = c("SYR", "IRQ", "AFG"),
+    transit_countries = c("TUR", "GRC", "MKD", "SRB", "BIH", "MNE", "ALB"),
+    destination_countries = c("HRV", "HUN", "ROU", "AUT", "DEU","GRC", "CYP", "BGR"),
+    color = "#E64A19"  
+  ),
+  list(
+    route_name = "Central Mediterranean",
+    origin_countries = c("ERI", "SDN", "NGA", "SOM"),
+    transit_countries = c("LBY", "TUN", "DZA", "EGY"),
+    destination_countries = c("ITA", "MLT"),
+    color = "#1976D2"  # Blue (for Central Med)
+  ),
+  list(
+    route_name = "Western Mediterranean",
+    origin_countries = c("DZA", "MLI", "NER"),
+    transit_countries = c("MAR"),
+    destination_countries = c("ESP"),
+    color = "#2E7D32"  # Green (for Western Med)
+  ),
+  list(
+    route_name = "Mesoamerican Corridor",
+    origin_countries = c("GTM", "HND", "SLV", "COL", "VEN"),
+    transit_countries = c("PAN", "CRI", "NIC", "MEX"),
+    destination_countries = c("USA"),
+    color = "#FFA000"  # Amber/Yellow (for Mesoamerican)
+  )
+)
+
+# Create a function to generate directional flows
+create_flow_lines <- function(route) {
+  # Function to create lines between groups of countries
+  create_lines_between_groups <- function(from_countries, to_countries) {
+    from_points <- centroids %>% filter(ISO3_CODE %in% from_countries)
+    to_points <- centroids %>% filter(ISO3_CODE %in% to_countries)
+    
+    # For each origin, create lines to each destination
+    lines <- list()
+    for (i in 1:nrow(from_points)) {
+      for (j in 1:nrow(to_points)) {
+        line_coords <- rbind(
+          st_coordinates(from_points$geometry[i]),
+          st_coordinates(to_points$geometry[j])
+        )
+        lines[[length(lines) + 1]] <- st_linestring(line_coords)
+      }
+    }
+    return(lines)
+  }
+  
+  # Create lines from origin to transit
+  origin_to_transit <- list()
+  if (length(route$origin_countries) > 0 && length(route$transit_countries) > 0) {
+    origin_to_transit <- create_lines_between_groups(route$origin_countries, route$transit_countries)
+  }
+  
+  # Create lines between transit countries (in sequence if possible)
+  transit_lines <- list()
+  if (length(route$transit_countries) > 1) {
+    for (i in 1:(length(route$transit_countries) - 1)) {
+      from_country <- route$transit_countries[i]
+      to_country <- route$transit_countries[i + 1]
+      
+      from_point <- centroids %>% filter(ISO3_CODE == from_country)
+      to_point <- centroids %>% filter(ISO3_CODE == to_country)
+      
+      if (nrow(from_point) > 0 && nrow(to_point) > 0) {
+        line_coords <- rbind(
+          st_coordinates(from_point$geometry),
+          st_coordinates(to_point$geometry)
+        )
+        transit_lines[[length(transit_lines) + 1]] <- st_linestring(line_coords)
+      }
+    }
+  }
+  
+  # Create lines from transit to destination
+  transit_to_dest <- list()
+  if (length(route$transit_countries) > 0 && length(route$destination_countries) > 0) {
+    # Use the last transit countries to connect to destinations
+    last_transit_countries <- tail(route$transit_countries, min(2, length(route$transit_countries)))
+    transit_to_dest <- create_lines_between_groups(last_transit_countries, route$destination_countries)
+  }
+  
+  # If there are no transit countries, connect origins directly to destinations
+  origin_to_dest <- list()
+  if (length(route$transit_countries) == 0 && length(route$origin_countries) > 0 && 
+      length(route$destination_countries) > 0) {
+    origin_to_dest <- create_lines_between_groups(route$origin_countries, route$destination_countries)
+  }
+  
+  # Combine all lines
+  all_lines <- c(origin_to_transit, transit_lines, transit_to_dest, origin_to_dest)
+  
+  # Create an sf object
+  if (length(all_lines) > 0) {
+    sf_lines <- st_sfc(all_lines, crs = st_crs(countries))
+    return(sf_lines)
+  } else {
+    return(NULL)
+  }
+}
+
+# Process each route
+all_routes_sf <- list()
+route_names <- character()
+route_colors <- character()
+
+for (route in route_data) {
+  route_lines <- create_flow_lines(route)
+  if (!is.null(route_lines)) {
+    # Create sf object for this route
+    route_sf <- st_sf(
+      route_name = rep(route$route_name, length(route_lines)),
+      geometry = route_lines
+    )
+    all_routes_sf[[length(all_routes_sf) + 1]] <- route_sf
+    route_names <- c(route_names, route$route_name)
+    route_colors <- c(route_colors, route$color)
+  }
+}
+
+# Combine all route sf objects
+routes_sf <- do.call(rbind, all_routes_sf)
+
+# Define colors for country types with stronger colors
+country_type_colors <- c(
+  "origin" = "#F44336",      # Red for origin countries
+  "transit" = "#FF9800",     # Orange for transit countries
+  "destination" = "#4CAF50"  # Green for destination countries
+)
+
+# Categorize countries by their role in migration
+categorize_countries <- function() {
+  # Collect all countries by type
+  all_origins <- unique(unlist(lapply(route_data, function(r) r$origin_countries)))
+  all_transits <- unique(unlist(lapply(route_data, function(r) r$transit_countries)))
+  all_destinations <- unique(unlist(lapply(route_data, function(r) r$destination_countries)))
+  
+  # Handle countries that appear in multiple categories - prioritize destination > transit > origin
+  all_transits <- setdiff(all_transits, all_destinations)
+  all_origins <- setdiff(all_origins, c(all_destinations, all_transits))
+  
+  # Create a data frame mapping country codes to their types
+  country_types <- data.frame(
+    ISO3_CODE = c(all_origins, all_transits, all_destinations),
+    country_type = c(
+      rep("origin", length(all_origins)),
+      rep("transit", length(all_transits)),
+      rep("destination", length(all_destinations))
+    ),
+    stringsAsFactors = FALSE
+  )
+  
+  return(country_types)
+}
+
+# Get country types
+country_types <- categorize_countries()
+
+# Print country categories for debugging
+print(paste("Origin countries:", length(unique(country_types$ISO3_CODE[country_types$country_type == "origin"]))))
+print(paste("Transit countries:", length(unique(country_types$ISO3_CODE[country_types$country_type == "transit"]))))
+print(paste("Destination countries:", length(unique(country_types$ISO3_CODE[country_types$country_type == "destination"]))))
+print(paste("Total categorized countries:", nrow(country_types)))
+
+# Join country types to countries data
+countries_with_types <- countries_with_names %>%
+  left_join(country_types, by = "ISO3_CODE") %>%
+  mutate(
+    country_type = ifelse(is.na(country_type), "other", country_type),
+    fill_color = case_when(
+      country_type == "origin" ~ as.character(country_type_colors["origin"]),
+      country_type == "transit" ~ as.character(country_type_colors["transit"]),
+      country_type == "destination" ~ as.character(country_type_colors["destination"]),
+      TRUE ~ "#f0f0f0"  # Light gray for other countries
+    )
+  )
+
+# Create the color vector for the legend
+route_colors_for_legend <- sapply(route_data, function(r) r$color)
+route_names_for_legend <- sapply(route_data, function(r) r$route_name)
+
+# Create the leaflet map
+m <- leaflet() %>%
+  addTiles() %>%
+  # Add all countries with light color (non-migration countries)
+  addPolygons(
+    data = countries_with_names %>% filter(!ISO3_CODE %in% country_types$ISO3_CODE),
+    fillColor = "#f0f0f0",
+    fillOpacity = 0.3,
+    color = "#666666",
+    weight = 0.5,
+    label = ~NAME_ENGL
+  )
+
+# Add countries by type with different colors (explicitly use the colors)
+for (type in c("origin", "transit", "destination")) {
+  countries_by_type <- countries_with_types %>% 
+    filter(country_type == type)
+  
+  if (nrow(countries_by_type) > 0) {
+    type_label <- paste0(toupper(substr(type, 1, 1)), substr(type, 2, nchar(type)))
+    
+    m <- m %>%
+      addPolygons(
+        data = countries_by_type,
+        fillColor = as.character(country_type_colors[type]),  # Force string conversion
+        fillOpacity = 0.7,
+        color = "#333333",
+        weight = 1,
+        label = ~paste0(NAME_ENGL, " (", type_label, ")"),
+        group = type
+      )
+  }
+}
+
+# Add route lines with arrows 
+for (i in 1:nrow(routes_sf)) {
+  route_geom <- routes_sf$geometry[i]
+  route_name <- routes_sf$route_name[i]
+  
+  # Find the matching route in route_data to get the exact color
+  route_idx <- match(route_name, sapply(route_data, function(r) r$route_name))
+  route_color <- route_data[[route_idx]]$color
+  
+  coords <- st_coordinates(route_geom)
+  m <- m %>%
+    addPolylines(
+      lng = coords[, "X"],
+      lat = coords[, "Y"],
+      color = route_color,
+      weight = 1,
+      opacity = 0.9,
+      label = route_name
+    ) %>%
+    addArrowhead(
+      lng = coords[, "X"],
+      lat = coords[, "Y"],
+      color = route_color,
+      weight = 1,
+      opacity = 0.9
+    )
+}
+
+# Add legends
+m <- m %>%
+  # Add route legend with correct colors
+  addLegend(
+    position = "bottomright",
+    colors = route_colors_for_legend,
+    labels = route_names_for_legend,
+    title = "Migration Routes",
+    opacity = 0.9
+  ) %>%
+  # Add country type legend
+  addLegend(
+    position = "bottomleft",
+    colors = unname(country_type_colors),
+    labels = c("Origin Countries", "Transit Countries", "Destination Countries"),
+    title = "Country Types",
+    opacity = 0.9
+  ) %>%
+  # Add layer controls
+  addLayersControl(
+    baseGroups = c(),
+    overlayGroups = c("origin", "transit", "destination"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+# Display the map
+m
+```
+```{r}
+
+# Define migration connections with volume
+# Format: origin country, destination country, volume 
+migration_connections <- tribble(
+  ~origin, ~destination, ~volume, ~group,
+  # Eastern Mediterranean Route
+  "SYR", "TUR", 10, "Eastern Mediterranean",
+  "IRQ", "TUR", 8, "Eastern Mediterranean",
+  "AFG", "TUR", 9, "Eastern Mediterranean",
+  "TUR", "GRC", 10, "Eastern Mediterranean",
+  "TUR", "BGR", 6, "Eastern Mediterranean",
+  "TUR", "CYP", 5, "Eastern Mediterranean",
+  
+  # Central Mediterranean Route
+  "SOM", "LBY", 7, "Central Mediterranean",
+  "ERI", "LBY", 8, "Central Mediterranean",
+  "SDN", "LBY", 9, "Central Mediterranean",
+  "NGA", "LBY", 7, "Central Mediterranean",
+  "LBY", "ITA", 10, "Central Mediterranean",
+  "TUN", "ITA", 6, "Central Mediterranean",
+  "EGY", "ITA", 5, "Central Mediterranean",
+  "LBY", "MLT", 4, "Central Mediterranean",
+  
+  # Western Mediterranean Route
+  "MLI", "MAR", 6, "Western Mediterranean",
+  "NER", "DZA", 5, "Western Mediterranean",
+  "DZA", "MAR", 7, "Western Mediterranean",
+  "MAR", "ESP", 8, "Western Mediterranean",
+  
+  # Western Balkan Route
+  "SYR", "GRC", 8, "Western Balkan",
+  "AFG", "GRC", 7, "Western Balkan",
+  "GRC", "MKD", 9, "Western Balkan",
+  "MKD", "SRB", 9, "Western Balkan",
+  "SRB", "HUN", 8, "Western Balkan",
+  "SRB", "HRV", 7, "Western Balkan",
+  "HUN", "AUT", 6, "Western Balkan",
+  "HRV", "DEU", 7, "Western Balkan",
+  "SRB", "ROU", 5, "Western Balkan",
+  
+  # Mesoamerican Corridor
+  "GTM", "MEX", 7, "Mesoamerican Corridor",
+  "HND", "MEX", 8, "Mesoamerican Corridor",
+  "SLV", "MEX", 7, "Mesoamerican Corridor",
+  "COL", "PAN", 6, "Mesoamerican Corridor",
+  "VEN", "PAN", 6, "Mesoamerican Corridor",
+  "PAN", "CRI", 5, "Mesoamerican Corridor",
+  "CRI", "NIC", 5, "Mesoamerican Corridor",
+  "NIC", "MEX", 6, "Mesoamerican Corridor",
+  "MEX", "USA", 10, "Mesoamerican Corridor"
+)
+
+# Create a function to prepare flow data
+create_flow_data <- function(connections) {
+  # Join origin and destination coordinates
+  flows <- connections %>%
+    left_join(country_coords, by = c("origin" = "ISO3_CODE")) %>%
+    rename(
+      origin_name = NAME_ENGL,
+      origin_lon = lon,
+      origin_lat = lat
+    ) %>%
+    left_join(country_coords, by = c("destination" = "ISO3_CODE")) %>%
+    rename(
+      dest_name = NAME_ENGL,
+      dest_lon = lon,
+      dest_lat = lat
+    )
+  
+  return(flows)
+}
+
+# Prepare flow data
+flow_data <- create_flow_data(migration_connections)
+
+# Categorize countries by their role in migration
+categorize_countries <- function(flow_data) {
+  # Identify origin, transit, and destination countries
+  all_origins <- unique(flow_data$origin)
+  all_destinations <- unique(flow_data$destination)
+  
+  # Transit countries are those that appear as both origins and destinations
+  transit_countries <- intersect(all_origins, all_destinations)
+  
+  # Pure origin countries only appear as origins
+  pure_origin_countries <- setdiff(all_origins, transit_countries)
+  
+  # Pure destination countries only appear as destinations
+  pure_dest_countries <- setdiff(all_destinations, transit_countries)
+  
+  # Create a data frame mapping country codes to their types
+  country_types <- bind_rows(
+    data.frame(
+      ISO3_CODE = pure_origin_countries,
+      country_type = "origin",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      ISO3_CODE = transit_countries,
+      country_type = "transit",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      ISO3_CODE = pure_dest_countries,
+      country_type = "destination",
+      stringsAsFactors = FALSE
+    )
+  )
+  
+  return(country_types)
+}
+
+# Get country types
+country_types <- categorize_countries(flow_data)
+
+# Join country types to countries data
+countries_with_types <- countries %>%
+  left_join(country_types, by = "ISO3_CODE") %>%
+  mutate(
+    country_type = ifelse(is.na(country_type), "other", country_type)
+  )
+
+# Define colors for country types
+country_colors <- c(
+  "origin" = "#F44336",      # Red for origin countries
+  "transit" = "#FF9800",     # Orange for transit countries
+  "destination" = "#4CAF50", # Green for destination countries
+  "other" = "#f8f9fa"        # Very light gray for other countries
+)
+
+# Define route colors
+route_colors <- c(
+  "Eastern Mediterranean" = "#E64A19",
+  "Central Mediterranean" = "#1976D2",
+  "Western Mediterranean" = "#2E7D32",
+  "Western Balkan" = "#7B1FA2",
+  "Mesoamerican Corridor" = "#FFA000"
+)
+
+# Create a world map visualization with network flows
+ggplot() +
+  # Base map for non-migration countries
+  geom_sf(
+    data = countries_with_types %>% filter(country_type == "other"),
+    fill = country_colors["other"],
+    color = "#e9ecef",
+    size = 0.1
+  ) +
+  # Add origin countries
+  geom_sf(
+    data = countries_with_types %>% filter(country_type == "origin"),
+    fill = country_colors["origin"],
+    color = "#e9ecef",
+    size = 0.2,
+    alpha = 0.7
+  ) +
+  # Add transit countries
+  geom_sf(
+    data = countries_with_types %>% filter(country_type == "transit"),
+    fill = country_colors["transit"],
+    color = "#e9ecef",
+    size = 0.2,
+    alpha = 0.7
+  ) +
+  # Add destination countries
+  geom_sf(
+    data = countries_with_types %>% filter(country_type == "destination"),
+    fill = country_colors["destination"],
+    color = "#e9ecef",
+    size = 0.2,
+    alpha = 0.7
+  ) +
+  # Add curved flow lines
+  geom_curve(
+    data = flow_data,
+    aes(
+      x = origin_lon, 
+      y = origin_lat, 
+      xend = dest_lon, 
+      yend = dest_lat,
+      size = volume,
+      color = group,
+      alpha = volume
+    ),
+    curvature = 0.2,
+    ncp = 5,  # Number of control points
+    arrow = arrow(length = unit(0.01, "npc"), type = "closed"),
+    lineend = "round"
+  ) +
+  # Set scales
+  scale_size_continuous(range = c(0.3, 1.5), guide = "none") +
+  scale_alpha_continuous(range = c(0.4, 0.8), guide = "none") +
+  scale_color_manual(
+    values = route_colors,
+    name = "Migration Routes"
+  ) +
+  # Set theme and styling
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0),
+    plot.subtitle = element_text(size = 12, hjust = 0),
+    plot.caption = element_text(size = 8, hjust = 1),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    panel.background = element_rect(fill = "#ffffff", color = NA),
+    panel.grid.major = element_line(color = "#f0f0f0", size = 0.2),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = "#ffffff", color = NA),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank()
+  ) +
+  # Add title and caption
+  labs(
+    title = "Global Migration Routes, 2023",
+    subtitle = "Major migration pathways across multiple regions",
+  ) +
+  # Set map bounds
+  coord_sf(expand = FALSE)
+
+# Save the map to a high-resolution file
+ggsave("migration_network_flows.png", width = 14, height = 8, dpi = 300)
+```
+

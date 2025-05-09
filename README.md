@@ -8,3 +8,11 @@
         <p>
             I created a leaflet map to visualize the data. The map shows the number of incidents reported in the data set. The barplot shows the number of incidents per migration route. The user can select the year, month and the region of interest. The map and the barplot will update accordingly.
         </p>
+
+
+To DO:
+- Set up notebook
+- make the migration routes more pretty and based on actual routes from literature
+- Decide on distance from the route as being a death on this route
+- Update the shiny app
+- 
