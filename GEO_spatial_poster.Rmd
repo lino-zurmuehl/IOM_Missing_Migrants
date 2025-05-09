@@ -14,8 +14,10 @@ library(tmap)
 library(sf)
 library(mapview)
 library(leaflet)
-install.packages("leaflet.extras2")
 library(leaflet.extras2)
+library(ggplot2)
+library(ggrepel)
+library(ggalt)  
 ```
 
 ## Load Data
@@ -375,40 +377,6 @@ m <- m %>%
 m
 ```
 ```{r}
-library(sf)
-library(giscoR)
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-library(ggalt)  # For curved lines
-
-# Get countries data
-countries <- gisco_get_countries(
-  year = "2016",
-  epsg = "4326",
-  cache = TRUE,
-  update_cache = FALSE,
-  cache_dir = NULL,
-  verbose = FALSE,
-  resolution = "60",  # Lower resolution for cleaner background
-  spatialtype = "RG",
-  country = NULL,
-  region = NULL
-)
-
-# Get centroids for origin/destination points
-centroids <- countries %>%
-  st_centroid() %>%
-  select(ISO3_CODE, NAME_ENGL, geometry)
-
-# Extract coordinates from centroids for easier use
-country_coords <- centroids %>%
-  mutate(
-    lon = st_coordinates(geometry)[,1],
-    lat = st_coordinates(geometry)[,2]
-  ) %>%
-  st_drop_geometry() %>%
-  select(ISO3_CODE, NAME_ENGL, lon, lat)
 
 # Define migration connections with volume
 # Format: origin country, destination country, volume 
