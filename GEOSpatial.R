@@ -37,17 +37,22 @@ mm_df <- read.csv("Missing_Migrants_2025.csv") %>%
   
   group_by(country) %>% 
   summarise(count = n()) %>% 
-  ungroup()
+  ungroup() %>%  
+  rename(count_tot_n_dead_and_missing = count)
 
 
-acled_df <- read.csv("IOM_Missing_Migrants/acled.csv") %>%
+acled_df <- read.csv("acled.csv") %>%
   rename(lat = latitude, lon = longitude) %>%
   drop_na(lat, lon, country) %>%
   # drop columns exept for lat, lon, event_type, country, year, event_id
   select(lat, lon, event_type, country, year, event_id_cnty) %>% 
   group_by(country) %>% 
   summarise(count = n()) %>% 
-  ungroup()
+  rename(count_conflict_events = count) %>%  #should specify whcih conflict events exactly 
+  ungroup()   
+
+acled_iom_df <- left_join(acled_df, mm_df, by = "country")
+
 
 # save list of all countries in mm_df to then filter out the countries in acled_df
 countries <- mm_df %>% 
