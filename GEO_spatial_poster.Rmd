@@ -18,6 +18,7 @@ library(leaflet.extras2)
 library(ggplot2)
 library(ggrepel)
 library(ggalt)  
+library(acled.api)
 ```
 
 ## Load Data
@@ -69,6 +70,24 @@ acled_df <- read.csv("acled.csv") %>%
   group_by(country) %>% 
   summarise(count = n()) %>% 
   ungroup()
+
+acled_df_new <- acled.api(
+  email.address = Sys.getenv("ACLED_EMAIL_ADDRESS"),
+  access.key = Sys.getenv("ACLED_ACCESS_KEY"),
+  region = c("Northern Africa", "North America", "Middle East", "Middle Africa", "Europe", "Eastern Africa", "Caucasus and Central Asia", "Western Africa"),
+  start.date = "2014-01-01",
+  end.date = "2025-02-23"
+)
+
+acled_df_new <- acled_df_new %>% 
+  group_by(country, year) %>% 
+  summarise(yearly_count= n(), .groups = 'drop') %>% 
+  group_by(country) %>% 
+  summarise(avg_per_year = mean(yearly_count), .groups = 'drop')
+  
+# new acled to csv
+write.csv(acled_df_new,"acled_new.csv", row.names = FALSE)
+
 ```
 
 ## Filter down to countries in mm_df
