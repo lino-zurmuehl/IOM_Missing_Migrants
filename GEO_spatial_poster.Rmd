@@ -38,10 +38,28 @@ mm_df <- read.csv("Missing_Migrants_2025.csv") %>%
     ~ "Atlantic route to the Canary Islands",
     TRUE ~ Migration.Route)) %>%
   filter(Country.of.Origin != "Unknown") %>% 
+  filter(!str_detect(Region.of.Incident, "Asia")) %>% 
   rename(country = Country.of.Origin) %>% 
-  group_by(country) %>% 
-  summarise(count = n()) %>% 
-  ungroup()
+  # Split comma-separated countries into multiple rows
+  separate_rows(country, sep = ",") %>%
+  
+  # Group by the original record ID
+  group_by(Main.ID) %>%
+  
+  # Count how many countries came from the same original row
+  mutate(num_countries = n()) %>%
+  
+  # Divide 'Total.Number.of.Dead.and.Missing' by the number of countries
+  mutate(total_number_of_dead_and_missing = Total.Number.of.Dead.and.Missing / num_countries) %>%
+  
+  ungroup() %>%
+  
+  # Clean whitespace in country names
+  mutate(country = trimws(country)) #%>%
+  
+  #group_by(country) %>% 
+  #summarise(count = n()) %>% 
+  #ungroup()
 
 acled_df <- read.csv("acled.csv") %>%
   rename(lat = latitude, lon = longitude) %>%
@@ -114,21 +132,21 @@ route_data <- list(
     origin_countries = c("ERI", "SDN", "NGA", "SOM"),
     transit_countries = c("LBY", "TUN", "DZA", "EGY"),
     destination_countries = c("ITA", "MLT"),
-    color = "#1976D2"  # Blue (for Central Med)
+    color = "#1976D2" 
   ),
   list(
     route_name = "Western Mediterranean",
     origin_countries = c("DZA", "MLI", "NER"),
     transit_countries = c("MAR"),
     destination_countries = c("ESP"),
-    color = "#2E7D32"  # Green (for Western Med)
+    color = "#2E7D32" 
   ),
   list(
     route_name = "Mesoamerican Corridor",
     origin_countries = c("GTM", "HND", "SLV", "COL", "VEN"),
     transit_countries = c("PAN", "CRI", "NIC", "MEX"),
     destination_countries = c("USA"),
-    color = "#FFA000"  # Amber/Yellow (for Mesoamerican)
+    color = "#FFA000" 
   )
 )
 
