@@ -1,6 +1,8 @@
 library(tidyverse)
 library(leaflet)
 library(htmltools)
+library(magrittr)
+
 # Read the data
 mm_df <- read.csv("Missing_Migrants_2025.csv") %>% 
   # replace the whitespeace in column names to _
@@ -32,27 +34,60 @@ mm_df <- read.csv("Missing_Migrants_2025.csv") %>%
   
   ungroup() %>%
   
-  # Clean whitespace in country names
-  mutate(country = trimws(country)) %>%
-  
+  # # Clean whitespace in country names
+  # mutate(country = trimws(country)) %>% 
+  # { 
+  #   assign("mm_df_coords", ., envir = .GlobalEnv)
+  #   .
+  # }
+   #%>% 
+  { mm_df_coords <<- . } %>%  # saves to global env
   group_by(country) %>% 
   summarise(count = n()) %>% 
   ungroup() %>%  
   rename(count_tot_n_dead_and_missing = count)
 
 
+mm_df_test <- mm_df_coords %>%
+  filter(!Migration.Route %in% c("Eastern Route to/from EHOA", "Route to Southern Africa"))   %>% 
+  mutate(route_category = case_when(
+    Migration.Route %in% c("US-Mexico border crossing", "Darien", "Caribbean to US", 
+                 "Venezuela to Caribbean", "Caribbean to Central America", 'Dominican Republic to Puerto Rico', 'Haiti to Dominican Republic') ~ "US-Mexico",
+    
+    Migration.Route %in% c("Central Mediterranean", "Atlantic route to the Canary Islands", 
+                 "Italy to France", 'Sahara Desert crossing', 'DRC to Uganda') ~ "Central Mediterranean",
+    
+    Migration.Route == "Western Mediterranean" ~ "Western Mediterranean",
+    
+    Migration.Route %in% c("Eastern Mediterranean", "Türkiye-Europe land route", 
+                 "Horn of Africa Route", "Northern Route from EHOA") ~ "Eastern Mediterranean",
+    
+    Migration.Route %in% c("Western Balkans", "Belarus-EU border", "Ukraine to Europe", 'English Channel to the UK') ~ "Balkan",
+    
+    Migration.Route %in%  "Uncategorized" & 
+      str_detect(Region.of.Incident, "America") ~ "US-Mexico",
+    
+    Region.of.Incident %in%  "Carribean" ~ "US-Mexico",
+    
+    TRUE ~ NA_character_
+  ))
+
+
+
+mm_df_coords
 acled_df <- read.csv("acled.csv") %>%
   rename(lat = latitude, lon = longitude) %>%
   drop_na(lat, lon, country) %>%
   # drop columns exept for lat, lon, event_type, country, year, event_id
   select(lat, lon, event_type, country, year, event_id_cnty) %>% 
+  { acled_df_coords <<- . } %>%
   group_by(country) %>% 
   summarise(count = n()) %>% 
   rename(count_conflict_events = count) %>%  #should specify whcih conflict events exactly 
   ungroup()   
 
 acled_iom_df <- left_join(acled_df, mm_df, by = "country")
-
+test_acled_iom_df <-  left_join(acled_df_coords, mm_df_coords, by = "lon")
 
 # save list of all countries in mm_df to then filter out the countries in acled_df
 countries <- mm_df %>% 
