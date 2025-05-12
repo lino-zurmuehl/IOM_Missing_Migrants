@@ -815,7 +815,7 @@ ggsave("migration_network_flows.png", final_plot, width = 14, height = 8, dpi = 
 # Add the violent incidents data to the countries_with_types dataframe
 countries_with_types_and_incidents <- countries_with_types %>%
   left_join(acled_df_agg, by = "ISO3_CODE") %>%
-  mutate(avg_per_year = avg_per_year / population)
+  mutate(avg_per_year = avg_per_year / population *1000000)  # Normalize by population
 
 route_countries <- migration_connections %>%
   # Extract all countries (both origin and destination) by route
@@ -839,8 +839,7 @@ route_violence_scores <- route_countries %>%
   group_by(group) %>%
   summarise(
     total_violence = sum(avg_per_year, na.rm = TRUE),
-    avg_violence = mean(avg_per_year, na.rm = TRUE),
-    country_count = n()  # Count how many countries are in each route
+    avg_violence = mean(avg_per_year, na.rm = TRUE) # Count how many countries are in each route
   )
 
 # Join the violence scores to the migration_connections dataframe
@@ -850,7 +849,7 @@ migration_connections_with_violence <- migration_connections %>%
     # Scale the volume based on the violence score
     # We're using a weighted combination of the original volume and the violence score
     # Normalizing by country count to account for route length differences
-    adjusted_volume = (1 + log10(total_violence/country_count))
+    adjusted_volume = (1 + log10(total_violence))
   )
 
 # Prepare flow data with the adjusted volumes
@@ -859,7 +858,7 @@ flow_data_adjusted <- create_flow_data(migration_connections_with_violence)
 # Define a continuous color scale for the heatmap
 heatmap_colors <- scale_fill_gradientn(
   colors = c("#FFFFCC", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#B10026"),
-  name = "Average Violent\nIncidents Per Year",
+  name = "Violent incidents per year\nper million inhabitants",
   na.value = "#f8f9fa"
 )
 
@@ -1032,7 +1031,7 @@ combined_migration_violence_map <- ggplot() +
   ) +
   # Add title and caption
   labs(
-    title = "Migration Routes and Violent Incidents, 2023",
+    title = "Migration Routes and Violent Incidents, From 2014-2023",
     subtitle = "Migration flows with line thickness adjusted by regional violence levels",
     caption = "Route thickness influenced by both migration volume and violence levels along the route"
   ) +
