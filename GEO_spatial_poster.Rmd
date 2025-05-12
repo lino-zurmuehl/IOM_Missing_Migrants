@@ -492,46 +492,46 @@ m
 # Define migration connections with volume
 # Format: origin country, destination country, volume (based on mm_df aggregated),
 migration_connections <- tribble(
-  ~origin, ~destination, ~volume, ~group,
+  ~origin, ~destination, ~group,
   # Eastern Mediterranean Route
-  "SYR", "TUR", 23.9, "Eastern Mediterranean",
-  "AFG", "IRN", 23.9, "Eastern Mediterranean",
-  "IRN", "TUR", 23.9, "Eastern Mediterranean",
-  "IRQ", "TUR", 23.9, "Eastern Mediterranean",
-  "AFG", "TUR", 23.9, "Eastern Mediterranean",
-  "TUR", "GRC", 23.9, "Eastern Mediterranean",
-  "TUR", "BGR", 23.9, "Eastern Mediterranean",
-  "TUR", "CYP", 23.9, "Eastern Mediterranean",
+  "SYR", "TUR", "Eastern Mediterranean",
+  "AFG", "IRN", "Eastern Mediterranean",
+  "IRN", "TUR", "Eastern Mediterranean",
+  "IRQ", "TUR", "Eastern Mediterranean",
+  "AFG", "TUR", "Eastern Mediterranean",
+  "TUR", "GRC", "Eastern Mediterranean",
+  "TUR", "BGR", "Eastern Mediterranean",
+  "TUR", "CYP", "Eastern Mediterranean",
   
   # Central Mediterranean Route
-  "SOM", "LBY", 76.5, "Central Mediterranean",
-  "ERI", "LBY", 76.5, "Central Mediterranean",
-  "SDN", "LBY", 76.5, "Central Mediterranean",
-  "NGA", "LBY", 76.5, "Central Mediterranean",
-  "LBY", "ITA", 76.5, "Central Mediterranean",
-  "TUN", "ITA", 76.5, "Central Mediterranean",
-  "EGY", "ITA", 76.5, "Central Mediterranean",
-  "LBY", "MLT", 76.5, "Central Mediterranean",
+  "SOM", "LBY", "Central Mediterranean",
+  "ERI", "LBY", "Central Mediterranean",
+  "SDN", "LBY", "Central Mediterranean",
+  "NGA", "LBY", "Central Mediterranean",
+  "LBY", "ITA", "Central Mediterranean",
+  "TUN", "ITA", "Central Mediterranean",
+  "EGY", "ITA", "Central Mediterranean",
+  "LBY", "MLT","Central Mediterranean",
   
   # Western Mediterranean Route
-  "MLI", "MAR", 30.9, "Western Mediterranean",
-  "NER", "DZA", 30.9, "Western Mediterranean",
-  "DZA", "MAR", 30.9, "Western Mediterranean",
-  "MAR", "ESP", 30.9, "Western Mediterranean",
+  "MLI", "MAR", "Western Mediterranean",
+  "NER", "DZA",  "Western Mediterranean",
+  "DZA", "MAR",  "Western Mediterranean",
+  "MAR", "ESP",  "Western Mediterranean",
   
   # Western Balkan Route
-  "SYR", "GRC", 34.8, "Western Balkan",
-  "AFG", "TUR", 34.8, "Western Balkan",
-  "AFG", "IRN", 34.8, "Western Balkan",
-  "IRN", "TUR", 34.8, "Western Balkan",
-  "TUR", "GRC", 34.8, "Western Balkan",
-  "GRC", "MKD", 34.8, "Western Balkan",
-  "MKD", "SRB", 34.8, "Western Balkan",
-  "SRB", "HUN", 34.8, "Western Balkan",
-  "SRB", "HRV", 34.8, "Western Balkan",
-  "HUN", "AUT", 34.8, "Western Balkan",
-  "HRV", "DEU", 34.8, "Western Balkan",
-  "SRB", "ROU", 34.8, "Western Balkan", # TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
+  "SYR", "GRC", "Western Balkan",
+  "AFG", "TUR", "Western Balkan",
+  "AFG", "IRN", "Western Balkan",
+  "IRN", "TUR", "Western Balkan",
+  "TUR", "GRC", "Western Balkan",
+  "GRC", "MKD", "Western Balkan",
+  "MKD", "SRB", "Western Balkan",
+  "SRB", "HUN", "Western Balkan",
+  "SRB", "HRV", "Western Balkan",
+  "HUN", "AUT", "Western Balkan",
+  "HRV", "DEU", "Western Balkan",
+  "SRB", "ROU", "Western Balkan", # TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
 )
 pure_dest_countries <- country_types$ISO3_CODE[country_types$country_type == "destination"]
 
@@ -740,7 +740,7 @@ p <- ggplot() +
     plot.title = element_text(face = "bold", size = 16, hjust = 0),
     plot.subtitle = element_text(size = 12, hjust = 0),
     plot.caption = element_text(size = 8, hjust = 1),
-    legend.position = "bottom",
+    legend.position = "left",
     legend.title = element_text(face = "bold"),
     panel.background = element_rect(fill = "#ffffff", color = NA),
     panel.grid.major = element_line(color = "#f0f0f0", size = 0.2),
@@ -775,18 +775,18 @@ positions <- length(aggregated_mm_df_ordered$count):1
 par(bty = "n")
 
 plot(
-  x = rep(1, nrow(df)), y = positions,
+  x = rep(1, nrow(aggregated_mm_df_ordered)), y = positions,
   xlim = c(1, 1),
   ylim = c(min(positions) - 1, max(positions) + 1),
   xaxt = 'n', yaxt = 'n', xlab = "", ylab = "",
   pch = 21,
-  bg = route_colors[df$route_category],
-  cex = sqrt(df$count) / 1,
+  bg = route_colors[aggregated_mm_df_ordered$route_category],
+  cex = sqrt(aggregated_mm_df_ordered$count) / 1,
   main = "Deaths per Route",
   cex.main = 3.4
 )
 
-text(x = 1, y = positions, labels = df$count, col = "white", font = 2, cex = 3.4)
+text(x = 1, y = positions, labels = aggregated_mm_df_ordered$count, col = "white", font = 2, cex = 3.4)
 
 # Save the plot as an object
 bubble_plot <- recordPlot()
@@ -800,7 +800,7 @@ bubble_grob <- grid::rasterGrob(bubble_img, interpolate = TRUE)
 
 #Combine with cowplot
 final_plot <- ggdraw(p) +
-  draw_grob(bubble_grob, x = 0.46, y = 0.1, width = 0.5, height = 0.3)
+  draw_grob(bubble_grob, x = 0.54, y = 0.1, width = 0.5, height = 0.3)
 
 print(final_plot)
  # Set map extents if needed
@@ -844,13 +844,7 @@ route_violence_scores <- route_countries %>%
 
 # Join the violence scores to the migration_connections dataframe
 migration_connections_with_violence <- migration_connections %>%
-  left_join(route_violence_scores, by = "group") %>%
-  mutate(
-    # Scale the volume based on the violence score
-    # We're using a weighted combination of the original volume and the violence score
-    # Normalizing by country count to account for route length differences
-    adjusted_volume = (1 + log10(total_violence))
-  )
+  left_join(route_violence_scores, by = "group") 
 
 # Prepare flow data with the adjusted volumes
 flow_data_adjusted <- create_flow_data(migration_connections_with_violence)
@@ -925,7 +919,7 @@ combined_migration_violence_map <- ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = adjusted_volume,
+      size = 25,
       color = group
     ),
     alpha = 0.9,
@@ -943,7 +937,7 @@ combined_migration_violence_map <- ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = adjusted_volume,
+      size = 25,
       color = group
     ),
     alpha = 0.9,
@@ -962,7 +956,7 @@ combined_migration_violence_map <- ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = adjusted_volume,
+      size = 25,
       color = group,
     ),
     alpha = 0.9,
@@ -978,7 +972,7 @@ combined_migration_violence_map <- ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = adjusted_volume,
+      size = 25,
       color = group,
       alpha = volume
     ),
