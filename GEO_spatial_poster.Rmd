@@ -79,10 +79,19 @@ acled_df_new <- acled.api(
   end.date = "2025-02-23"
 )
 
-acled_df_new <- acled_df_new %>% 
-  group_by(country, year) %>% 
+
+
+```
+
+
+```{r}
+acled_df_agg <- acled_df_new %>% 
+  # extract charaters event_id_cnty , then rename it to country_code
+  mutate(country_code = str_extract(event_id_cnty, "[A-Z]{3}")) %>%
+  group_by(country, year, country_code) %>% 
   summarise(yearly_count= n(), .groups = 'drop') %>% 
-  group_by(country) %>% 
+  rename(ISO3_CODE = country_code) %>%
+  group_by(country, ISO3_CODE) %>% 
   summarise(avg_per_year = mean(yearly_count), .groups = 'drop')
 
 # add population data from package to acled new
@@ -90,11 +99,28 @@ pop_df <- read.csv("pop_data.csv", skip = 4) %>%
   select(Country.Code, Country.Name, X2014, X2015, X2016, X2017, X2018, X2019, X2020, X2021, X2022, X2023) %>%
   # make an avg out of all the years
   mutate(population = rowMeans(select(., X2014:X2023), na.rm = TRUE)) %>%
-  rename(country = Country.Name)
-  
-# new acled to csv
-write.csv(acled_df_new,"acled_new.csv", row.names = FALSE)
+  rename(country = Country.Name, ISO3_CODE = Country.Code) %>% 
+  select(ISO3_CODE, population)
 
+
+# join acled and population data
+acled_df_agg <- acled_df_agg %>% 
+  mutate(ISO3_CODE = case_when(
+    ISO3_CODE == "ANG" ~ "AGO",
+    ISO3_CODE == "ALG" ~ "DZA",
+    ISO3_CODE == "CAO" ~ "CMR",
+    ISO3_CODE == "NIG" ~ "NGA",
+    ISO3_CODE == "NIR" ~ "NER",
+    ISO3_CODE == "SUD" ~ "SDN",
+    ISO3_CODE == "MOR" ~ "MAR",
+    ISO3_CODE == "CON" ~ "COD",
+    TRUE ~ ISO3_CODE
+  )) %>% 
+  left_join(pop_df, by = "ISO3_CODE")
+  
+
+# new acled to csv
+write.csv(acled_df_agg,"acled_new.csv", row.names = FALSE)
 ```
 
 ## Filter down to countries in mm_df
@@ -129,6 +155,7 @@ aggregated_mm_df <- mm_df %>%
   summarise(count = n(), .groups = 'drop')
 ```
 # Loading Country Polygons
+
 ```{r}
 # Get countries data
 countries <- gisco_get_countries(
@@ -740,52 +767,10 @@ Heatmap Conflict
 
 ```{r}
 
-# Join the violent incidents data with the countries data
-# We need to map country names to ISO3 codes
-# Creating a mapping table
-country_name_to_iso3 <- tribble(
-  ~country, ~ISO3_CODE,
-  "Syria", "SYR",
-  "Turkey", "TUR",
-  "Afghanistan", "AFG",
-  "Iran", "IRN",
-  "Iraq", "IRQ",
-  "Greece", "GRC",
-  "Bulgaria", "BGR",
-  "Cyprus", "CYP",
-  "Somalia", "SOM",
-  "Eritrea", "ERI",
-  "Sudan", "SDN",
-  "Nigeria", "NGA",
-  "Libya", "LBY",
-  "Italy", "ITA",
-  "Tunisia", "TUN",
-  "Egypt", "EGY",
-  "Malta", "MLT",
-  "Mali", "MLI",
-  "Morocco", "MAR",
-  "Niger", "NER",
-  "Algeria", "DZA",
-  "Spain", "ESP",
-  "North Macedonia", "MKD",
-  "Serbia", "SRB",
-  "Hungary", "HUN",
-  "Croatia", "HRV",
-  "Austria", "AUT",
-  "Germany", "DEU",
-  "Romania", "ROU"
-)
-
-# Join the ISO3 codes to the violent incidents data
-violent_incidents_with_iso3 <- acled_df_new %>%
-  left_join(country_name_to_iso3, by = "country")
-
 # Add the violent incidents data to the countries_with_types dataframe
 countries_with_types_and_incidents <- countries_with_types %>%
-  left_join(violent_incidents_with_iso3, by = "ISO3_CODE") %>%
-  mutate(
-    avg_per_year = ifelse(is.na(avg_per_year), 0, avg_per_year)
-  )
+  left_join(acled_df_agg, by = "ISO3_CODE") %>%
+  mutate(avg_per_year = avg_per_year / population)
 
 route_countries <- migration_connections %>%
   # Extract all countries (both origin and destination) by route
@@ -799,7 +784,7 @@ route_countries <- migration_connections %>%
   # Make sure each country appears only once per route
   distinct(group, all_countries) %>%
   # Join with violence data
-  left_join(violent_incidents_with_iso3, by = c("all_countries" = "ISO3_CODE")) %>%
+  left_join(acled_df_agg, by = c("all_countries" = "ISO3_CODE")) %>%
   # Ensure we don't have duplicate countries within each route
   distinct(group, all_countries, .keep_all = TRUE)
 
