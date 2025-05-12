@@ -84,6 +84,13 @@ acled_df_new <- acled_df_new %>%
   summarise(yearly_count= n(), .groups = 'drop') %>% 
   group_by(country) %>% 
   summarise(avg_per_year = mean(yearly_count), .groups = 'drop')
+
+# add population data from package to acled new
+pop_df <- read.csv("pop_data.csv", skip = 4) %>% 
+  select(Country.Code, Country.Name, X2014, X2015, X2016, X2017, X2018, X2019, X2020, X2021, X2022, X2023) %>%
+  # make an avg out of all the years
+  mutate(population = rowMeans(select(., X2014:X2023), na.rm = TRUE)) %>%
+  rename(country = Country.Name)
   
 # new acled to csv
 write.csv(acled_df_new,"acled_new.csv", row.names = FALSE)
@@ -121,9 +128,7 @@ aggregated_mm_df <- mm_df %>%
   group_by(route_category) %>% 
   summarise(count = n(), .groups = 'drop')
 ```
-
-## Leaflet Map (ignore this for now)
-
+# Loading Country Polygons
 ```{r}
 # Get countries data
 countries <- gisco_get_countries(
@@ -147,6 +152,21 @@ countries_with_names <- countries %>%
 centroids <- countries_with_names %>%
   st_centroid() %>%
   select(ISO3_CODE, NAME_ENGL, geometry)
+
+# Extract coordinates from centroids for easier use
+country_coords <- centroids %>%
+  mutate(
+    lon = st_coordinates(geometry)[,1],
+    lat = st_coordinates(geometry)[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(ISO3_CODE, NAME_ENGL, lon, lat)
+```
+
+## Leaflet Map (ignore this for now)
+
+
+```{r}
 
 # Define route data with more detailed structure
 # For each route, define:
@@ -197,11 +217,16 @@ create_flow_lines <- function(route) {
     lines <- list()
     for (i in 1:nrow(from_points)) {
       for (j in 1:nrow(to_points)) {
-        line_coords <- rbind(
-          st_coordinates(from_points$geometry[i]),
-          st_coordinates(to_points$geometry[j])
-        )
-        lines[[length(lines) + 1]] <- st_linestring(line_coords)
+        # Extract the coordinates safely by ensuring we're working with points
+        if (length(from_points$geometry[i]) > 0 && length(to_points$geometry[j]) > 0) {
+          # Get coordinates from individual geometries
+          from_point <- st_coordinates(from_points$geometry[i])[1, ]
+          to_point <- st_coordinates(to_points$geometry[j])[1, ]
+          
+          # Create line connecting points
+          line_coords <- rbind(from_point, to_point)
+          lines[[length(lines) + 1]] <- st_linestring(line_coords)
+        }
       }
     }
     return(lines)
@@ -224,10 +249,11 @@ create_flow_lines <- function(route) {
       to_point <- centroids %>% filter(ISO3_CODE == to_country)
       
       if (nrow(from_point) > 0 && nrow(to_point) > 0) {
-        line_coords <- rbind(
-          st_coordinates(from_point$geometry),
-          st_coordinates(to_point$geometry)
-        )
+        # Safely extract coordinates
+        from_coord <- st_coordinates(from_point$geometry)[1, ]
+        to_coord <- st_coordinates(to_point$geometry)[1, ]
+        
+        line_coords <- rbind(from_coord, to_coord)
         transit_lines[[length(transit_lines) + 1]] <- st_linestring(line_coords)
       }
     }
@@ -432,6 +458,7 @@ m
 ```
 
 ## Missing Migrant flows and theoretical categories of countries
+
 ```{r}
 
 # Define migration connections with volume
