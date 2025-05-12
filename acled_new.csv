@@ -1,127 +1,127 @@
-"country","avg_per_year"
-"Afghanistan",7521.77777777778
-"Akrotiri and Dhekelia",1.75
-"Albania",168.5
-"Algeria",783.416666666667
-"Andorra",5.4
-"Angola",93
-"Armenia",869.375
-"Austria",343
-"Azerbaijan",2368.125
-"Bahrain",1331.3
-"Bailiwick of Guernsey",3
-"Bailiwick of Jersey",4.66666666666667
-"Belarus",506.625
-"Belgium",648.166666666667
-"Benin",134
-"Bosnia and Herzegovina",159.375
-"Bulgaria",497.5
-"Burkina Faso",977.75
-"Burundi",660.916666666667
-"Cameroon",1335.08333333333
-"Cape Verde",45.5
-"Central African Republic",510.666666666667
-"Chad",120.5
-"Comoros",32
-"Croatia",157.75
-"Cyprus",264.625
-"Czech Republic",236.5
-"Democratic Republic of Congo",2217.66666666667
-"Denmark",461.833333333333
-"Djibouti",13.25
-"Egypt",575.666666666667
-"Equatorial Guinea",4.6
-"Eritrea",6.58333333333333
-"Estonia",65.5
-"Ethiopia",1060.16666666667
-"Faroe Islands",1.75
-"Finland",270.833333333333
-"France",6312.33333333333
-"Gabon",37.1666666666667
-"Gambia",16.75
-"Georgia",610.875
-"Germany",4034
-"Ghana",203.916666666667
-"Gibraltar",1
-"Greece",741.25
-"Greenland",7.8
-"Guinea",195.583333333333
-"Guinea-Bissau",15.5833333333333
-"Hungary",194.166666666667
-"Iceland",39.5
-"Iran",2992.2
-"Iraq",6196.4
-"Ireland",272.833333333333
-"Isle of Man",3
-"Israel",1687.1
-"Italy",4264.33333333333
-"Ivory Coast",150.083333333333
-"Jordan",395.4
-"Kazakhstan",648.75
-"Kenya",1049.16666666667
-"Kosovo",140.375
-"Kuwait",14.4444444444444
-"Kyrgyzstan",273.375
-"Latvia",46.8333333333333
-"Lebanon",3205.1
-"Liberia",64.3333333333333
-"Libya",860.083333333333
-"Liechtenstein",3.75
-"Lithuania",80.1666666666667
-"Luxembourg",30.3333333333333
-"Madagascar",302.583333333333
-"Malawi",118.5
-"Mali",965.666666666667
-"Malta",59.8333333333333
-"Mauritania",147.833333333333
-"Mauritius",97.1666666666667
-"Mayotte",58.6666666666667
-"Moldova",238.875
-"Monaco",3.6
-"Montenegro",182.375
-"Morocco",1041.08333333333
-"Mozambique",368.5
-"Netherlands",723
-"Niger",368.75
-"Nigeria",2945.91666666667
-"North Macedonia",161.25
-"Norway",338.5
-"Oman",7.66666666666667
-"Palestine",6807.5
-"Poland",1317.66666666667
-"Portugal",416.333333333333
-"Qatar",8.71428571428571
-"Republic of Congo",18.9166666666667
-"Reunion",104.166666666667
-"Romania",369.5
-"Russia",4020.25
-"Rwanda",25.25
-"San Marino",6.6
-"Sao Tome and Principe",8.4
-"Saudi Arabia",321.636363636364
-"Senegal",125.25
-"Serbia",539.125
-"Seychelles",3.8
-"Sierra Leone",48.5833333333333
-"Slovakia",153.166666666667
-"Slovenia",99.3333333333333
-"Somalia",2921.16666666667
-"South Sudan",1174.58333333333
-"Spain",3329
-"Sudan",2276.83333333333
-"Sweden",1085.66666666667
-"Switzerland",166.5
-"Syria",15438.6666666667
-"Tajikistan",21.75
-"Tanzania",57.75
-"Togo",35.6666666666667
-"Tunisia",823.166666666667
-"Turkey",4261.8
-"Turkmenistan",8
-"Uganda",430.5
-"Ukraine",26374.875
-"United Arab Emirates",5
-"United Kingdom",1373.33333333333
-"Uzbekistan",129.25
-"Vatican City",2
-"Yemen",8757.90909090909
+"country","ISO3_CODE","avg_per_year","population"
+"Afghanistan","AFG",7521.77777777778,37271598.8
+"Akrotiri and Dhekelia","XSB",1.75,NA
+"Albania","ALB",168.5,2841310.8
+"Algeria","DZA",783.416666666667,42800895.9
+"Andorra","AND",5.4,75979.6
+"Angola","AGO",93,31877775.9
+"Armenia","ARM",869.375,2980550
+"Austria","AUT",343,8849000.3
+"Azerbaijan","AZE",2368.125,9928690.4
+"Bahrain","BHR",1331.3,1467489.4
+"Bailiwick of Guernsey","GGY",3,NA
+"Bailiwick of Jersey","JEY",4.66666666666667,NA
+"Belarus","BLR",506.625,9378540.8
+"Belgium","BEL",648.166666666667,11469829.9
+"Benin","BEN",134,12559253
+"Bosnia and Herzegovina","BIH",159.375,3365171.9
+"Bulgaria","BGR",497.5,6950817.4
+"Burkina Faso","BFO",977.75,NA
+"Burundi","BUR",660.916666666667,NA
+"Cameroon","CMR",1335.08333333333,25185032.1
+"Cape Verde","CPV",45.5,515108.6
+"Central African Republic","CEN",510.666666666667,NA
+"Chad","CHA",120.5,NA
+"Comoros","COM",32,779967.5
+"Croatia","HRV",157.75,3994827.6
+"Cyprus","CYP",264.625,1276600
+"Czech Republic","CZE",236.5,10627376.4
+"Democratic Republic of Congo","DRC",2217.66666666667,NA
+"Denmark","DNK",461.833333333333,5796613.2
+"Djibouti","DJI",13.25,1079259.1
+"Egypt","EGY",575.666666666667,106312804.8
+"Equatorial Guinea","EQG",4.6,NA
+"Eritrea","ERI",6.58333333333333,3243000.9
+"Estonia","EST",65.5,1329158.1
+"Ethiopia","ETH",1060.16666666667,114490116.1
+"Faroe Islands","FRO",1.75,51408.8
+"Finland","FIN",270.833333333333,5519226.8
+"France","FRA",6312.33333333333,67283929.5
+"Gabon","GAB",37.1666666666667,2237141.5
+"Gambia","GAM",16.75,NA
+"Georgia","GEO",610.875,3720622
+"Germany","DEU",4034,82710846
+"Ghana","GHA",203.916666666667,30934282.6
+"Gibraltar","GIB",1,35336.8
+"Greece","GRC",741.25,10680868.6
+"Greenland","GRL",7.8,56356.1
+"Guinea","GUI",195.583333333333,NA
+"Guinea-Bissau","GNB",15.5833333333333,1945737.2
+"Hungary","HUN",194.166666666667,9755479.3
+"Iceland","ISL",39.5,356465.9
+"Iran","IRN",2992.2,86244191.9
+"Iraq","IRQ",6196.4,40770778.5
+"Ireland","IRL",272.833333333333,4921592.2
+"Isle of Man","IMN",3,83878.9
+"Israel","ISR",1687.1,8969250
+"Italy","ITA",4264.33333333333,59941393.6
+"Ivory Coast","CDI",150.083333333333,NA
+"Jordan","JOR",395.4,10433828.9
+"Kazakhstan","KAZ",648.75,19064870
+"Kenya","KEN",1049.16666666667,50691531.7
+"Kosovo","XKX",140.375,1785632
+"Kuwait","KWT",14.4444444444444,4262938.4
+"Kyrgyzstan","KGZ",273.375,6511499.45
+"Latvia","LVA",46.8333333333333,1925585.7
+"Lebanon","LBN",3205.1,6001986.2
+"Liberia","LBR",64.3333333333333,5009181.5
+"Libya","LBY",860.083333333333,6884009.3
+"Liechtenstein","LIE",3.75,38465.5
+"Lithuania","LTU",80.1666666666667,2842853.9
+"Luxembourg","LUX",30.3333333333333,612224
+"Madagascar","MAG",302.583333333333,NA
+"Malawi","MAW",118.5,NA
+"Mali","MLI",965.666666666667,20807225.7
+"Malta","MLT",59.8333333333333,490978.4
+"Mauritania","MAA",147.833333333333,NA
+"Mauritius","MUS",97.1666666666667,1264019.5
+"Mayotte","MYT",58.6666666666667,NA
+"Moldova","MDA",238.875,2684097.1
+"Monaco","MCO",3.6,37856.6
+"Montenegro","MNE",182.375,620680.7
+"Morocco","MAR",1041.08333333333,35991309.4
+"Mozambique","MZM",368.5,NA
+"Netherlands","NLD",723,17309568.2
+"Niger","NER",368.75,22610402.5
+"Nigeria","NGA",2945.91666666667,207025077.6
+"North Macedonia","MKD",161.25,1875303.6
+"Norway","NOR",338.5,5326165.4
+"Oman","OMN",7.66666666666667,4510714.1
+"Palestine","PSE",6807.5,4645518.1
+"Poland","POL",1317.66666666667,37627301.6
+"Portugal","POR",416.333333333333,NA
+"Qatar","QAT",8.71428571428571,2535104.9
+"Republic of Congo","COD",18.9166666666667,91679930.1
+"Reunion","REU",104.166666666667,NA
+"Romania","ROU",369.5,19435648.5
+"Russia","RUS",4020.25,144809302.9
+"Rwanda","RWA",25.25,12641671.9
+"San Marino","SMR",6.6,33830
+"Sao Tome and Principe","STP",8.4,212786.8
+"Saudi Arabia","SAU",321.636363636364,30809369.7
+"Senegal","SEN",125.25,16126113.8
+"Serbia","SRB",539.125,6925527.3
+"Seychelles","SYC",3.8,100705.6
+"Sierra Leone","SIE",48.5833333333333,NA
+"Slovakia","SVK",153.166666666667,5437796.4
+"Slovenia","SVN",99.3333333333333,2086225.5
+"Somalia","SOM",2921.16666666667,15797841.5
+"South Sudan","SSD",1174.58333333333,10804704.9
+"Spain","ESP",3329,47082408.9
+"Sudan","SDN",2276.83333333333,44688301
+"Sweden","SWE",1085.66666666667,10172300.6
+"Switzerland","CHE",166.5,8539372.6
+"Syria","SYR",15438.6666666667,20678322.2
+"Tajikistan","TJK",21.75,9414650.7
+"Tanzania","TAZ",57.75,NA
+"Togo","TOG",35.6666666666667,NA
+"Tunisia","TUN",823.166666666667,11783876.3
+"Turkey","TUR",4261.8,81681554.3
+"Turkmenistan","TKM",8,6725420.9
+"Uganda","UGA",430.5,42380639.5
+"Ukraine","UKR",26374.875,44073677
+"United Arab Emirates","ARE",5,9305040.1
+"United Kingdom","GBR",1373.33333333333,66493416.6
+"Uzbekistan","UZB",129.25,32783560.7
+"Vatican City","VAT",2,NA
+"Yemen","YEM",8757.90909090909,34667097.7
