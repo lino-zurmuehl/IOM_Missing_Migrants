@@ -19,6 +19,7 @@ library(ggplot2)
 library(ggrepel)
 library(ggalt)  
 library(acled.api)
+library(cowplot)  
 ```
 
 ## Load Data
@@ -595,7 +596,7 @@ route_colors <- c(
 )
 
 # Create a world map visualization with network flows - modified arrows
-ggplot() +
+p <- ggplot() +
   # Base map for non-migration countries
   geom_sf(
     data = countries_with_types %>% filter(country_type == "other"),
@@ -636,7 +637,7 @@ ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = volume,
+      size = 25,
       color = group
     ),
     alpha = 0.9,
@@ -654,7 +655,7 @@ ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = volume, # TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
+      size = 25, # TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
       color = group
     ),
     alpha = 0.9,
@@ -673,7 +674,7 @@ ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = volume, #TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
+      size = 25, #TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
       color = group,
     ),
     alpha = 0.9,
@@ -689,7 +690,7 @@ ggplot() +
       y = origin_lat, 
       xend = dest_lon, 
       yend = dest_lat,
-      size = volume, #TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
+      size = 25, #TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
       color = group,
       alpha = volume
     ),
@@ -733,11 +734,55 @@ ggplot() +
            expand = FALSE)
 # TODO: Add legend for categories (orignin, transit, destination)
 
-# Save the map to a high-resolution file
-ggsave("migration_network_flows.png", width = 14, height = 8, dpi = 300)
-```
-Heatmap Conflict
 
+```
+
+```{r}
+# legend bubbles 
+# Sort by descending death count for size ranking
+aggregated_mm_df_ordered <- aggregated_mm_df %>%
+  arrange(desc(count)) %>% filter(!route_category == "US-Mexico") %>% mutate(route_category = if_else(route_category == "Balkan", "Western Balkan", route_category))
+  
+# Set positions for plotting (top to bottom)
+positions <- length(aggregated_mm_df_ordered$count):1
+par(bty = "n")
+
+plot(
+  x = rep(1, nrow(df)), y = positions,
+  xlim = c(1, 1),
+  ylim = c(min(positions) - 1, max(positions) + 1),
+  xaxt = 'n', yaxt = 'n', xlab = "", ylab = "",
+  pch = 21,
+  bg = route_colors[df$route_category],
+  cex = sqrt(df$count) / 1,
+  main = "Deaths per Route",
+  cex.main = 3.4
+)
+
+text(x = 1, y = positions, labels = df$count, col = "white", font = 2, cex = 3.4)
+
+# Save the plot as an object
+bubble_plot <- recordPlot()
+png("bubble_plot.png", width = 600, height = 600, bg = "transparent")
+replayPlot(bubble_plot)
+dev.off()
+
+#Read the image and embed it into the main plot
+bubble_img <- png::readPNG("bubble_plot.png")
+bubble_grob <- grid::rasterGrob(bubble_img, interpolate = TRUE)
+
+#Combine with cowplot
+final_plot <- ggdraw(p) +
+  draw_grob(bubble_grob, x = 0.46, y = 0.1, width = 0.5, height = 0.3)
+
+print(final_plot)
+ # Set map extents if needed
+ggsave("migration_network_flows.png", final_plot, width = 14, height = 8, dpi = 300)
+
+```
+
+
+ Heatmap Conflict
 ```{r}
 
 # Join the violent incidents data with the countries data
