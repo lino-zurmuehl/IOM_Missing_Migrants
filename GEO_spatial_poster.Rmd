@@ -129,9 +129,7 @@ aggregated_mm_df <- mm_df %>%
   group_by(route_category) %>% 
   summarise(count = n(), .groups = 'drop')
 ```
-
-## Leaflet Map (ignore this for now)
-
+# Loading Country Polygons
 ```{r}
 # Get countries data
 countries <- gisco_get_countries(
@@ -164,6 +162,12 @@ country_coords <- centroids %>%
   ) %>%
   st_drop_geometry() %>%
   select(ISO3_CODE, NAME_ENGL, lon, lat)
+```
+
+## Leaflet Map (ignore this for now)
+
+
+```{r}
 
 # Define route data with more detailed structure
 # For each route, define:
