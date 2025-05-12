@@ -92,10 +92,9 @@ write.csv(acled_df_new,"acled_new.csv", row.names = FALSE)
 
 ## Filter down to countries in mm_df
 
-
 ```{r filtering}
 mm_df <- mm_df %>% 
-  filter(!Migration.Route %in% c("Eastern Route to/from EHOA", "Route to Southern Africa"))   %>% 
+  filter(!Migration.Route %in% c("Eastern Route to/from EHOA", "Route to Southern Africa", "Sea crossings to Mayotte"))   %>% 
   mutate(route_category = case_when(
       Migration.Route %in% c("US-Mexico border crossing", "Darien", "Caribbean to US", 
                    "Venezuela to Caribbean", "Caribbean to Central America", 'Dominican Republic to Puerto Rico', 'Haiti to Dominican Republic') ~ "US-Mexico",
@@ -113,10 +112,10 @@ mm_df <- mm_df %>%
       Migration.Route %in%  "Uncategorized" & 
         str_detect(Region.of.Incident, "America") ~ "US-Mexico",
       
-      Region.of.Incident %in%  "Carribean" ~ "US-Mexico",
+      Region.of.Incident %in%  "Caribbean" ~ "US-Mexico",
       
       TRUE ~ NA_character_
-    )) #TODO: check if this is correct
+    )) %>%  filter(!(Migration.Route == "Uncategorized" & route_category == "NA"))
 
 aggregated_mm_df <- mm_df %>% 
   group_by(route_category) %>% 
