@@ -1101,24 +1101,45 @@ ggsave("violence_heatmap_with_bubbles.png", final_violence_plot, width = 14, hei
 
 ```{r}
 # Create a plot showing the relationship between route violence and migration volume
-route_comparison_plot <- ggplot(route_violence_scores, aes(x = reorder(group, total_violence), y = total_violence)) +
-  geom_bar(stat = "identity", aes(fill = group)) +
-  scale_fill_manual(values = route_colors) +
-  geom_text(aes(label = round(total_violence, 1)), hjust = -0.1, size = 3.5) +
+route_violence_scores <- aggregated_mm_df_ordered %>%
+  inner_join(route_violence_scores, by = c("route_category" = "group")) %>% rename(group = route_category) %>% rename(total_deaths = count)
+
+route_long <- route_violence_scores %>%
+  pivot_longer(cols = c(total_violence, total_deaths), 
+               names_to = "metric", 
+               values_to = "value")  %>% 
+  mutate(metric = recode(metric,
+                         total_deaths = "Deaths",
+                         total_violence = "Violence"))
+
+# route_long <- route_long %>%
+#   mutate(metric = recode(metric,
+#                          total_deaths = "Deaths",
+#                          total_violence = "Violence"))
+
+
+route_comparison_plot <- 
+ggplot(route_long, aes(x = reorder(group, -value), y = value, fill = group)) +
+  geom_bar(stat = "identity") +
   coord_flip() +
+  scale_fill_manual(values = route_colors) +
+  facet_grid(rows = vars(metric), scales = "free_y", switch = "y") +
   labs(
-    title = "Total Violence Score along the Migration Route Countries",
+    title = "Total Violence and Deaths along Migration Routes",
     x = "",
-    y = "Sum of Average Annual Violent Incidents per Million Inhabitants",
+    y = ""
   ) +
   theme_minimal() +
   theme(
     legend.position = "none",
-    panel.grid.major.y = element_blank()
+    strip.placement = "outside",
+    strip.text.y.left = element_text(angle = 90, hjust = 0.5),
+    strip.background = element_blank()
   )
 
+
 # Save the comparison plot
-ggsave("route_violence_comparison.png", route_comparison_plot, width = 12, height = 6, dpi = 300) # TODO: Add Number of deaths per route. 
+ggsave("route_violence_comparison.png", route_comparison_plot, width = 12, height = 6, dpi = 300) 
 ```
 
 ## Correlation between violence and deaths
