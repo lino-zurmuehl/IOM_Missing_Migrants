@@ -1,6 +1,6 @@
 ---
 title: "Untitled"
-author: "Lino Zurmuehl + Giulia Pertilli"
+author: "Lino Zurmuehl + Giulia Petrilli"
 date: "2025-05-08"
 output: html_document
 ---
@@ -20,6 +20,8 @@ library(ggrepel)
 library(ggalt)  
 library(acled.api)
 library(cowplot)  
+library(extrafont)
+
 ```
 
 ## Load Data
@@ -507,7 +509,9 @@ migration_connections <- tribble(
   "SOM", "LBY", "Central Mediterranean",
   "ERI", "LBY", "Central Mediterranean",
   "SDN", "LBY", "Central Mediterranean",
-  "NGA", "LBY", "Central Mediterranean",
+  "SDN", "EGY", "Central Mediterranean",
+  "NGA", "NER", "Central Mediterranean",
+  "NER", "LBY", "Central Mediterranean",
   "LBY", "ITA", "Central Mediterranean",
   "TUN", "ITA", "Central Mediterranean",
   "EGY", "ITA", "Central Mediterranean",
@@ -515,6 +519,7 @@ migration_connections <- tribble(
   
   # Western Mediterranean Route
   "MLI", "MAR", "Western Mediterranean",
+  "NGA", "NER", "Western Mediterranean",
   "NER", "DZA",  "Western Mediterranean",
   "DZA", "MAR",  "Western Mediterranean",
   "MAR", "ESP",  "Western Mediterranean",
@@ -531,7 +536,7 @@ migration_connections <- tribble(
   "SRB", "HRV", "Western Balkan",
   "HUN", "AUT", "Western Balkan",
   "HRV", "DEU", "Western Balkan",
-  "SRB", "ROU", "Western Balkan", # TODO: Change the 'volume' into one number (no longer need to be based on mm_df aggragted)
+  "SRB", "ROU", "Western Balkan", 
 )
 pure_dest_countries <- country_types$ISO3_CODE[country_types$country_type == "destination"]
 
@@ -626,34 +631,11 @@ route_colors <- c(
 p <- ggplot() +
   # Base map for non-migration countries
   geom_sf(
-    data = countries_with_types %>% filter(country_type == "other"),
-    fill = country_colors["other"],
+    data = countries_with_types,
+    aes(fill = country_type),
     color = "#e9ecef",
-    size = 0.1
-  ) +
-  # Add origin countries
-  geom_sf(
-    data = countries_with_types %>% filter(country_type == "origin"),
-    fill = country_colors["origin"],
-    color = "#e9ecef",
-    size = 0.2,
-    alpha = 0.7
-  ) +
-  # Add transit countries
-  geom_sf(
-    data = countries_with_types %>% filter(country_type == "transit"),
-    fill = country_colors["transit"],
-    color = "#e9ecef",
-    size = 0.2,
-    alpha = 0.7
-  ) +
-  # Add destination countries
-  geom_sf(
-    data = countries_with_types %>% filter(country_type == "destination"),
-    fill = country_colors["destination"],
-    color = "#e9ecef",
-    size = 0.2,
-    alpha = 0.7
+    size = 0.1,
+    alpha = 0.8
   ) +
   # EASTERN MEDITERRANEAN ROUTE (Higher Curvature): Non-destination connections
   geom_curve(
@@ -705,7 +687,7 @@ p <- ggplot() +
       color = group,
     ),
     alpha = 0.9,
-    curvature = 0.2,
+    curvature = 0.3,
     ncp = 5,  # Number of control points
     lineend = "round"
   ) +
@@ -722,7 +704,7 @@ p <- ggplot() +
       alpha = volume
     ),
     alpha = 0.9,
-    curvature = 0.2,
+    curvature = 0.3,
     ncp = 5,  # Number of control points
     arrow = arrow(length = unit(0.01, "npc"), type = "closed"),
     lineend = "round"
@@ -732,8 +714,14 @@ p <- ggplot() +
   scale_alpha(0.9) +
   scale_color_manual(
     values = route_colors,
-    name = "Migration Routes"
+    name = "Migration Routes",
+    guide = guide_legend(order = 2)
   ) +
+  scale_fill_manual(
+  name = "Country type",
+  values = country_colors,
+  guide = guide_legend(order = 1)
+  )+
   # Set theme and styling
   theme_minimal() +
   theme(
@@ -742,18 +730,19 @@ p <- ggplot() +
     plot.caption = element_text(size = 8, hjust = 1),
     legend.position = "left",
     legend.title = element_text(face = "bold"),
-    panel.background = element_rect(fill = "#ffffff", color = NA),
+    panel.background = element_rect(fill = "#faf0e0", color = NA),
     panel.grid.major = element_line(color = "#f0f0f0", size = 0.2),
     panel.grid.minor = element_blank(),
-    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.background = element_rect(fill = "#faf0e0", color = NA),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     axis.title = element_blank()
   ) +
   # Add title and caption
   labs(
-    title = "Global Migration Routes, 2023",
-    subtitle = "Major migration pathways across multiple regions",
+    title = "Global Migration Routes, 2014-2023",
+    subtitle = "Major migration pathways across the mediterranean regions",
+    caption = "Data source: ACLED, IOM, UNHCR, 2023"
   ) +
   # Set map bounds
   coord_sf(  xlim = c(-20, 85),  
@@ -772,7 +761,7 @@ aggregated_mm_df_ordered <- aggregated_mm_df %>%
   
 # Set positions for plotting (top to bottom)
 positions <- length(aggregated_mm_df_ordered$count):1
-par(bty = "n")
+par(bg = "#faf0e0",bty = "n")
 
 plot(
   x = rep(1, nrow(aggregated_mm_df_ordered)), y = positions,
@@ -786,7 +775,7 @@ plot(
   cex.main = 3.4
 )
 
-text(x = 1, y = positions, labels = aggregated_mm_df_ordered$count, col = "white", font = 2, cex = 3.4)
+text(x = 1, y = positions, labels = aggregated_mm_df_ordered$count, col = "#faf0e0", font = 2, cex = 3.4, )
 
 # Save the plot as an object
 bubble_plot <- recordPlot()
@@ -853,7 +842,7 @@ flow_data_adjusted <- create_flow_data(migration_connections_with_violence)
 # Define a continuous color scale for the heatmap
 heatmap_colors <- scale_fill_viridis_c(
   option = "inferno", 
-  name = "Violent incidents per year\nper million inhabitants",
+  name = "Conflict incidents per year\nper million inhabitants",
   na.value = "#f8f9fa",
   begin = 0.1,  # Skip the darkest part at the bottom
   end = 0.9,    # Skip the lightest part at the top
@@ -880,17 +869,17 @@ violence_map <- ggplot() +
     plot.caption = element_text(size = 8, hjust = 1),
     legend.position = "bottom",
     legend.title = element_text(face = "bold"),
-    panel.background = element_rect(fill = "#ffffff", color = NA),
+    panel.background = element_rect(fill = "#faf0e0", color = NA),
     panel.grid.major = element_line(color = "#f0f0f0", size = 0.2),
     panel.grid.minor = element_blank(),
-    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.background = element_rect(fill = "#faf0e0", color = NA),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     axis.title = element_blank()
   ) +
   # Add title and caption
   labs(
-    title = "Average Violent Incidents by Country (Annual)",
+    title = "Average Confilct Incidents by Country (Annual)",
     subtitle = "Countries along major migration routes, 2023",
   ) +
   # Set map bounds
@@ -1000,7 +989,7 @@ combined_migration_violence_map <- ggplot() +
     x = -160,
     y = -40,
     label = paste(
-      "Route Violence Scores:\n",
+      "Route Conflict Scores:\n",
       paste(
         route_violence_scores$group,
         ":", 
@@ -1020,19 +1009,19 @@ combined_migration_violence_map <- ggplot() +
     plot.caption = element_text(size = 8, hjust = 1),
     legend.position = "left",
     legend.title = element_text(face = "bold"),
-    panel.background = element_rect(fill = "#ffffff", color = NA),
+    panel.background = element_rect(fill = "#faf0e0", color = NA),
     panel.grid.major = element_line(color = "#f0f0f0", size = 0.2),
     panel.grid.minor = element_blank(),
-    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.background = element_rect(fill = "#faf0e0", color = NA),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     axis.title = element_blank()
   ) +
   # Add title and caption
   labs(
-    title = "Migration Routes and Violent Incidents, From 2014-2023",
-    subtitle = "Migration flows and average annual violent incidents per million inhabitants",
-    caption = "Violance score is the sum of average annual violent incidents per million inhabitants\nalong the migration route countries. \nData source: ACLED, IOM, UNHCR, 2023",
+    title = "Migration Routes and Conflict Incidents, From 2014-2023",
+    subtitle = "Migration flows and average annual conflict incidents per million inhabitants",
+    caption = "Conflict score is the sum of average annual conflict incidents per million inhabitants\nalong the migration route countries. \nData source: ACLED, IOM, UNHCR, 2023",
   ) +
   # Set map bounds
   coord_sf(  xlim = c(-20, 85),  
@@ -1059,7 +1048,7 @@ violence_df_ordered <- route_violence_scores %>%
 # Set positions for plotting (top to bottom)
 positions <- length(violence_df_ordered$total_violence):1
 
-par(bty = "n", mar = c(2, 2, 4, 2))  # Adjust margins for better spacing
+par(bg = "#faf0e0", bty = "n", mar = c(2, 2, 4, 2))  # Adjust margins for better spacing
 plot(
   x = rep(1, nrow(violence_df_ordered)), 
   y = positions,
@@ -1069,7 +1058,7 @@ plot(
   pch = 21,
   bg = route_colors[violence_df_ordered$route_category],
   cex = sqrt(violence_df_ordered$total_violence),
-  main = "Violence Score (p.m.p)\nper Route",
+  main = "Conflict Score (p.m.p)\nper Route",
   cex.main = 2.5
 )
 
@@ -1081,7 +1070,7 @@ for (i in 1:length(positions)) {
     x = 1, 
     y = positions[i] + text_offsets[i],  # Apply offset based on position
     labels = violence_df_ordered$total_violence[i], 
-    col = "white", 
+    col = "#faf0e0", 
     font = 2, 
     cex = 3.4
   )
