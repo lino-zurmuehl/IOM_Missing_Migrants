@@ -809,7 +809,7 @@ ggsave("migration_network_flows.png", final_plot, width = 14, height = 8, dpi = 
 ```
 
 
- Heatmap Conflict
+## Heatmap Conflict
 ```{r}
 
 # Add the violent incidents data to the countries_with_types dataframe
@@ -830,6 +830,7 @@ route_countries <- migration_connections %>%
   distinct(group, all_countries) %>%
   # Join with violence data
   left_join(acled_df_agg, by = c("all_countries" = "ISO3_CODE")) %>%
+  mutate(avg_per_year = avg_per_year / population *1000000) %>% 
   # Ensure we don't have duplicate countries within each route
   distinct(group, all_countries, .keep_all = TRUE)
 
@@ -850,11 +851,15 @@ migration_connections_with_violence <- migration_connections %>%
 flow_data_adjusted <- create_flow_data(migration_connections_with_violence)
 
 # Define a continuous color scale for the heatmap
-heatmap_colors <- scale_fill_gradientn(
-  colors = c("#FFFFCC", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#B10026"),
+heatmap_colors <- scale_fill_viridis_c(
+  option = "inferno", 
   name = "Violent incidents per year\nper million inhabitants",
-  na.value = "#f8f9fa"
+  na.value = "#f8f9fa",
+  begin = 0.1,  # Skip the darkest part at the bottom
+  end = 0.9,    # Skip the lightest part at the top
+  direction = -1  # Reverse so dark = high values
 )
+
 
 # Create the heatmap of violent incidents
 violence_map <- ggplot() +
@@ -1013,7 +1018,7 @@ combined_migration_violence_map <- ggplot() +
     plot.title = element_text(face = "bold", size = 16, hjust = 0),
     plot.subtitle = element_text(size = 12, hjust = 0),
     plot.caption = element_text(size = 8, hjust = 1),
-    legend.position = "bottom",
+    legend.position = "left",
     legend.title = element_text(face = "bold"),
     panel.background = element_rect(fill = "#ffffff", color = NA),
     panel.grid.major = element_line(color = "#f0f0f0", size = 0.2),
@@ -1026,8 +1031,8 @@ combined_migration_violence_map <- ggplot() +
   # Add title and caption
   labs(
     title = "Migration Routes and Violent Incidents, From 2014-2023",
-    subtitle = "Migration flows with line thickness adjusted by regional violence levels",
-    caption = "Route thickness influenced by both migration volume and violence levels along the route"
+    subtitle = "Migration flows and average annual violent incidents per million inhabitants",
+    caption = "Violance score is the sum of average annual violent incidents per million inhabitants\nalong the migration route countries. \nData source: ACLED, IOM, UNHCR, 2023",
   ) +
   # Set map bounds
   coord_sf(  xlim = c(-20, 85),  
@@ -1038,6 +1043,74 @@ combined_migration_violence_map <- ggplot() +
 ggsave("violence_by_country_map.png", violence_map, width = 14, height = 8, dpi = 300)
 ggsave("combined_migration_violence_map.png", combined_migration_violence_map, width = 14, height = 8, dpi = 300)
 
+
+```
+
+
+```{r}
+# Prepare the violence data
+violence_df_ordered <- route_violence_scores %>%
+  rename(route_category = group) %>%
+  # Sort by descending violence score
+  arrange(desc(total_violence)) %>% 
+  # decimals for the labels
+  mutate(total_violence = round(total_violence))
+  
+# Set positions for plotting (top to bottom)
+positions <- length(violence_df_ordered$total_violence):1
+
+par(bty = "n", mar = c(2, 2, 4, 2))  # Adjust margins for better spacing
+plot(
+  x = rep(1, nrow(violence_df_ordered)), 
+  y = positions,
+  xlim = c(0.7, 1.3),  # Widen x-limits to give more horizontal space
+  ylim = c(min(positions) - 1, max(positions) + 1),
+  xaxt = 'n', yaxt = 'n', xlab = "", ylab = "",
+  pch = 21,
+  bg = route_colors[violence_df_ordered$route_category],
+  cex = sqrt(violence_df_ordered$total_violence),
+  main = "Violence Score (p.m.p)\nper Route",
+  cex.main = 2.5
+)
+
+# Add text labels with a vertical offset that increases for each position
+# This ensures top bubbles' text doesn't overlap with lower bubbles
+text_offsets <- c(0.3, 0, 0, 0)  # Adjust these values as needed
+for (i in 1:length(positions)) {
+  text(
+    x = 1, 
+    y = positions[i] + text_offsets[i],  # Apply offset based on position
+    labels = violence_df_ordered$total_violence[i], 
+    col = "white", 
+    font = 2, 
+    cex = 3.4
+  )
+}
+
+# Save the plot as an object
+violence_bubble_plot <- recordPlot()
+
+# Export to PNG with transparent background
+png("violence_bubble_plot.png", width = 600, height = 600, bg = "transparent")
+replayPlot(violence_bubble_plot)
+dev.off()
+
+# Read the image and embed it into the violence heatmap plot
+violence_bubble_img <- png::readPNG("violence_bubble_plot.png")
+violence_bubble_grob <- grid::rasterGrob(violence_bubble_img, interpolate = TRUE)
+
+# Assuming your violence heatmap is called 'violence_heatmap_plot'
+# Combine with cowplot
+final_violence_plot <- ggdraw(combined_migration_violence_map) +
+  draw_grob(violence_bubble_grob, x = 0.54, y = 0.1, width = 0.5, height = 0.3)
+
+print(final_violence_plot)
+
+# Save the combined plot
+ggsave("violence_heatmap_with_bubbles.png", final_violence_plot, width = 14, height = 8, dpi = 300)
+```
+
+```{r}
 # Create a plot showing the relationship between route violence and migration volume
 route_comparison_plot <- ggplot(route_violence_scores, aes(x = reorder(group, total_violence), y = total_violence)) +
   geom_bar(stat = "identity", aes(fill = group)) +
@@ -1045,9 +1118,9 @@ route_comparison_plot <- ggplot(route_violence_scores, aes(x = reorder(group, to
   geom_text(aes(label = round(total_violence, 1)), hjust = -0.1, size = 3.5) +
   coord_flip() +
   labs(
-    title = "Total Violence Score by Migration Route",
+    title = "Total Violence Score along the Migration Route Countries",
     x = "",
-    y = "Sum of Average Annual Violent Incidents"
+    y = "Sum of Average Annual Violent Incidents per Million Inhabitants",
   ) +
   theme_minimal() +
   theme(
@@ -1056,7 +1129,60 @@ route_comparison_plot <- ggplot(route_violence_scores, aes(x = reorder(group, to
   )
 
 # Save the comparison plot
-ggsave("route_violence_comparison.png", route_comparison_plot, width = 10, height = 6, dpi = 300)
+ggsave("route_violence_comparison.png", route_comparison_plot, width = 12, height = 6, dpi = 300) # TODO: Add Number of deaths per route. 
 ```
 
+## Correlation between violence and deaths
 
+```{r}
+route_comparison <- route_violence_scores %>% 
+  rename(route_category = group) %>%
+  # Match route naming between datasets
+  mutate(route_category = case_when(
+    route_category == "Western Balkan" ~ "Western Balkan",
+    route_category == "Balkan" ~ "Western Balkan",
+    TRUE ~ route_category
+  )) %>%
+  # Join with death count data
+  left_join(aggregated_mm_df_ordered, by = "route_category") %>%
+  # Filter out any rows with missing data
+  #filter(!is.na(total_violence) & !is.na(count))
+  mutate(deaths_per_violence = count / total_violence)
+
+# Create a simple visualization that acknowledges the limited data
+comparison_plot <- ggplot(route_comparison, aes(x = route_category, y = deaths_per_violence)) +
+  geom_col(aes(fill = route_category), width = 0.6) +
+  geom_text(aes(label = sprintf("%.2f", deaths_per_violence), 
+                y = deaths_per_violence + max(deaths_per_violence)*0.05), 
+            size = 3.5) +
+  scale_fill_manual(values = route_colors) +
+  labs(
+    title = "Deaths per Violence Incident by Migration Route",
+    subtitle = "Direct comparison of four routes (insufficient data for formal correlation)",
+    x = NULL,
+    y = "Deaths per Violent Incident"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", size = 12),
+    plot.subtitle = element_text(size = 10, face = "italic"),
+    axis.title = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
+  )
+
+comparison_plot
+
+# Create a simple table showing the raw data
+route_table <- route_comparison %>%
+  select(
+    Route = route_category,
+    `Violence Score` = total_violence,
+    `Death Count` = count,
+    `Deaths per Violent Incident` = deaths_per_violence
+  ) %>%
+  arrange(desc(`Deaths per Violent Incident`))
+
+# Print the table
+print(route_table)
+```
